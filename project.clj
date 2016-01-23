@@ -13,7 +13,8 @@
   :source-paths ["src"]
 
   :clean-targets ["server.js"
-                  "target"]
+                  "target"
+                  "build"]
 
   :cljsbuild {
     :builds [{:id "dev"
@@ -29,7 +30,7 @@
              {:id "prod"
               :source-paths ["src"]
               :compiler {
-                :output-to "server.js"
-                :output-dir "target/server_prod"
+                :output-to "build/sharewode-server-node.js"
+                :output-dir "build"
                 :target :nodejs
                 :optimizations :simple}}]})

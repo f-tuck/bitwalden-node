@@ -1,8 +1,14 @@
-## Setup ##
+## Setup dependencies ##
 
-	./bootstrap.sh
+	make
+
+## Build ##
+
+	make build
 
 ## Develop ##
+
+Make sure you have [Leiningen](https://github.com/technomancy/leiningen/#installation) installed.
 
 Console 1:
 
@@ -10,11 +16,7 @@ Console 1:
 
 Console 2:
 
-	node target/server_dev/sharewode_node.js
-
-## Deploy ##
-
-	lein cljsbuild once prod
+	./build/node/bin/node target/server_dev/sharewode_node.js
 
 ## Thanks ##
 

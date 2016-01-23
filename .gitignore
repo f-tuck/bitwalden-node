@@ -1,8 +1,6 @@
 /classes/
 /lib/
 /node_modules/
-/nodeenv/
-/nodeenv-src/
 /target/
 *.jar
 .lein-deps-sum
@@ -11,3 +9,4 @@
 figwheel_server.log
 pom.xml
 .*.swp
+/build/

@@ -4,7 +4,7 @@ NODE=./build/node/bin/node
 NODE_VERSION=5.5.0
 NODEENV_VERSION=0.13.6
 
-default: deps
+default: deps build
 
 deps: build/node/bin/node node_modules
 

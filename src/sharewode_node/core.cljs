@@ -11,24 +11,23 @@
 
 (nodejs/enable-util-print!)
 
-(defn make-exit-fn [dht]
+(defn make-exit-fn [configuration]
   (fn [options err]
-    (if (:cleanup options) (print "clean"))
+    (if (:cleanup options) (print "Cleaning up."))
     (if err (.log js/console (.-stack err)))
     (when (:exit options) (print "Exiting") (.exit js/process))
 
     (fs.writeFileSync
       config-filename
       (js/JSON.stringify
-        (clj->js {"peers" (.toArray dht)
-                  "nodeId" (.toString (.-nodeId dht) "hex")}))
+        (clj->js @configuration))
       "utf8")))
 
 (defn -main []
   (println "Sharewode node start.")
-  (let [configuration (try (js/JSON.parse (fs.readFileSync config-filename)) (catch js/Error e {})) 
-        dht (DHT. {:nodeId (get configuration "nodeId")})
-        exit-fn (make-exit-fn dht)]
+  (let [configuration (atom (try (js/JSON.parse (fs.readFileSync config-filename)) (catch js/Error e {}))) 
+        exit-fn (make-exit-fn configuration) 
+        dht (DHT. {:nodeId (get @configuration "nodeId")})]
     
     (.on dht "ready"
          (fn []
@@ -48,7 +47,7 @@
                                                       (print "DHT announce success.")))))
              120000)))
     
-    (doseq [node (aget configuration "peers")]
+    (doseq [node (aget @configuration "peers")]
       (print "adding:" node)
       ; (.addNode dht node)
       )
@@ -61,7 +60,6 @@
     ; catches ctrl+c event
     (.on js/process "SIGINT" (.bind exit-fn nil {:exit true}))
     ; catches uncaught exceptions
-    (.on js/process "uncaughtException" (.bind exit-fn nil {:exit true}))
-    ))
+    (.on js/process "uncaughtException" (.bind exit-fn nil {:exit true}))))
 
 (set! *main-cli-fn* -main)

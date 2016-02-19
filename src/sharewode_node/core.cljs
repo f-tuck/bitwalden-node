@@ -4,6 +4,7 @@
 (defonce DHT (nodejs/require "bittorrent-dht"))
 (defonce fs (nodejs/require "fs"))
 (defonce os (nodejs/require "os"))
+(defonce crypto (nodejs/require "crypto"))
 (defonce config-filename (str (os.homedir) "/.sharewode-node.json"))
 
 ; (def test-hash "fd4928492a15e77b3661e523a4b81f656cdc04d8")
@@ -25,10 +26,18 @@
 
 (defn -main []
   (println "Sharewode node start.")
-  (let [configuration (atom (try (js/JSON.parse (fs.readFileSync config-filename)) (catch js/Error e {}))) 
+  (let [configuration (atom (try (js->clj (js/JSON.parse (fs.readFileSync config-filename))) (catch js/Error e {})))
+        nodeId (or (@configuration "nodeId") (.toString (.randomBytes crypto 20) "hex"))
+        peerId (or (@configuration "peerId") (.toString (.randomBytes crypto 20) "hex"))
         exit-fn (make-exit-fn configuration) 
         dht (DHT. {:nodeId (get @configuration "nodeId")})]
-    
+
+    (swap! configuration assoc-in ["nodeId"] nodeId)
+    (swap! configuration assoc-in ["peerId"] peerId)
+
+    (print "nodeId:" nodeId)
+    (print "peerId:" peerId)
+
     (.on dht "ready"
          (fn []
            (print "DHT bootstrapped.")

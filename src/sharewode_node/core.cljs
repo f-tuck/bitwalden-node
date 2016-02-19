@@ -7,6 +7,8 @@
 (defonce crypto (nodejs/require "crypto"))
 (defonce config-filename (str (os.homedir) "/.sharewode-node.json"))
 
+(def client-string "-SW0001-")
+
 ; (def test-hash "fd4928492a15e77b3661e523a4b81f656cdc04d8")
 (def test-hash "b0282bf0571958845c22b01b9a7430d860018a11")
 
@@ -28,10 +30,10 @@
   (println "Sharewode node start.")
   (let [configuration (atom (try (js->clj (js/JSON.parse (fs.readFileSync config-filename))) (catch js/Error e {})))
         nodeId (or (@configuration "nodeId") (.toString (.randomBytes crypto 20) "hex"))
-        peerId (or (@configuration "peerId") (.toString (.randomBytes crypto 20) "hex"))
+        peerId (or (@configuration "peerId") (str client-string (.toString (.randomBytes crypto 6) "hex")))
         exit-fn (make-exit-fn configuration) 
-        dht (DHT. {:nodeId (get @configuration "nodeId")})]
-
+        dht (DHT. {:nodeId nodeId})]
+    
     (swap! configuration assoc-in ["nodeId"] nodeId)
     (swap! configuration assoc-in ["peerId"] peerId)
 

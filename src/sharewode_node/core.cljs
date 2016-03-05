@@ -3,10 +3,15 @@
 
 (defonce DHT (nodejs/require "bittorrent-dht"))
 (defonce Swarm (nodejs/require "bittorrent-swarm"))
+(defonce Discovery (nodejs/require "torrent-discovery"))
+(defonce parse-address (nodejs/require "addr-to-ip-port"))
+(defonce ut_pex (nodejs/require "ut_pex"))
+
 (defonce fs (nodejs/require "fs"))
 (defonce os (nodejs/require "os"))
 (defonce crypto (nodejs/require "crypto"))
-(defonce config-filename (str (os.homedir) "/.sharewode-node.json"))
+
+(defonce config-filename (str (.homedir os) "/.sharewode-node.json"))
 
 (def client-string "-SW0001-")
 
@@ -47,15 +52,49 @@
     (print "nodeId:" nodeId)
     (print "peerId:" peerId)
 
-    (.on swarm "wire" (fn [wire]
-                        (js/console.log "New wire:" (.-peerId wire))
+    (.on swarm "wire" (fn [wire addr]
+                        (js/console.log "New wire:" (.-peerId wire) addr)
                         (js/console.log "wires:" (.-length (.-wires swarm)))
                         (.on wire "close" (fn [] (print "Wire closed!") (print "wires:" (.-length (.-wires swarm)))))
-                        (.on wire "keep-alive" (fn [] (print "Wire keepalive.")))))
+                        (.on wire "keep-alive" (fn [] (print "Wire keepalive.")))
+                        (.on wire "handshake" (fn [infoHash peerId]
+                                                (print "Wire handshake:" infoHash peerId)))
+                        (if addr
+                          (let [[remoteAddress remotePort] (parse-address addr)]
+                            (print "Addr:" remoteAddress remotePort)
+                            (.on wire "port" (fn [port]
+                                               (print "Wire on port!" port remoteAddress remotePort)
+                                               (if (and remoteAddress (> port 0) (< port 65536))
+                                                 (.addNode dht #js {:host remoteAddress :port port}))))))
+                        (.on wire "timeout" (fn []
+                                              (print "Wire timeout!")
+                                              (.destroy wire)))
+                        (.setKeepAlive wire true)
+                        (.use wire (ut_pex))
+                        (let [pex (.-ut_pex wire)]
+                          (print "Using ut_pex" pex)
+                          (.on pex "peer" (fn [peer]
+                                            (js/console.log "ut_pex peer!" peer)
+                                            (.addPeer swarm peer)))
+                          (.on pex "dropped" (fn [peer]
+                                               (js/console.log "ut_pex dropped peer!" peer)
+                                               (let [peerObj (aget (.-_peers swarm) peer)]
+                                                 (if (and peerObj (not (.-connected peerObj)))
+                                                   (.removePeer swarm peer)))))
+                          (.start pex))))
     
     (.on swarm "listening" (fn []
                              (js/console.log "Swarm listening.")
-                             (print "Swarm port:" (.-port (.address swarm)))))
+                             (print "Swarm port:" (.-port (.address swarm)))
+                             
+                             (let [discovery (Discovery. #js {:dht dht :peerId peerId :port (.-port (.address swarm))})]
+                               (.on discovery "peer" (fn [peer]
+                                                       (js/console.log "Discovery on peer:" peer)
+                                                       (.addPeer swarm peer)
+                                                       (doseq [w (.-wires swarm)]
+                                                         (.addPeer (.-ut_pex w) peer))))
+                               (.on discovery "dhtAnnounce" (fn [peer] (js/console.log "Discovery on dhtAnnounce.")))
+                               (.setTorrent discovery test-hash))))
     (.on swarm "error" (fn [] (js/console.log "Swarm error.")))
     (.on swarm "close" (fn [] (js/console.log "Swarm close.")))
     

@@ -36,7 +36,7 @@
   (println "test-hash:" test-hash)
   (let [configuration (atom (try (js->clj (js/JSON.parse (fs.readFileSync config-filename))) (catch js/Error e {})))
         nodeId (or (@configuration "nodeId") (.toString (.randomBytes crypto 20) "hex"))
-        peerId (or (@configuration "peerId") (str client-string (.toString (.randomBytes crypto 6) "hex")))
+        peerId (or (@configuration "peerId") (.toString (js/Buffer. (+ client-string (.randomBytes crypto 6))) "hex"))
         exit-fn (make-exit-fn configuration) 
         swarm (Swarm. test-hash peerId #js {"handshake" {"dht" true}})
         dht (DHT. {:nodeId nodeId})]

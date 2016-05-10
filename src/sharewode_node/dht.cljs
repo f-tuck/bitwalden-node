@@ -53,10 +53,8 @@
         (debug "DHT ready!")
         (debug "DHT port:" (.-port (.address dht-obj)))
         (swap! configuration assoc-in ["dht" "port"] (.-port (.address dht-obj)))
-        ; TODO - save the port and re-use it next time
-        ; tell the world we're ready to accept connections
-        ;(js/console.log "DHT state" (.toJSON dht))
         (swap! configuration assoc-in ["dht" "nodes"] (.toJSON dht-obj))
+        ; tell the world we're ready to accept connections
         (debug "Announcing sharewode pool.")
         (let [[error result-code] (<! (<<< #(.announce dht-obj sharewode-dht-address 8923 %)))]
           (if error

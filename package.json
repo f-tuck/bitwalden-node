@@ -6,6 +6,7 @@
     "node": "0.12.x"
   },
   "dependencies": {
+    "jayson": "^2.0.0",
     "webtorrent": "^0.72.2"
   },
   "devDependencies": {

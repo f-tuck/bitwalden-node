@@ -33,7 +33,5 @@
     (.on js/process "uncaughtException" (.bind exit-fn nil {:exit true}))))
 
 (defn get-or-set! [configuration k default]
-  (if (@configuration k)
-    k
-    (swap! configuration assoc k default)))
+  (or (@configuration k) (swap! configuration assoc k default)))
 

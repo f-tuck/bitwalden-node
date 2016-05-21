@@ -5,8 +5,8 @@
 (defonce os (nodejs/require "os"))
 (defonce fs (nodejs/require "fs"))
 
-; load the configuration file
-(defonce default-config-filename (str (.homedir os) "/.sharewode-node.json"))
+(defn default-config-filename []
+  (str (.homedir os) "/.sharewode-node.json"))
 
 (defn make-exit-fn [configuration filename]
   (fn [options err]
@@ -20,16 +20,17 @@
       "utf8")))
 
 (defn load [filename]
-  (let [configuration (atom (try (js->clj (js/JSON.parse (fs.readFileSync filename))) (catch js/Error e {})))
-        exit-fn (make-exit-fn configuration filename)]
+  (atom (try (js->clj (js/JSON.parse (fs.readFileSync filename))) (catch js/Error e {}))))
+
+(defn install-exit-handler [configuration filename]
+  (let [exit-fn (make-exit-fn configuration filename)]
     ; https://stackoverflow.com/a/14032965
     ; do something when app is closing
     (.on js/process "exit" (.bind exit-fn nil {:cleanup true}))
     ; catches ctrl+c event
     (.on js/process "SIGINT" (.bind exit-fn nil {:exit true}))
     ; catches uncaught exceptions
-    (.on js/process "uncaughtException" (.bind exit-fn nil {:exit true}))
-  configuration))
+    (.on js/process "uncaughtException" (.bind exit-fn nil {:exit true}))))
 
 (defn get-or-set! [configuration k default]
   (if (@configuration k)

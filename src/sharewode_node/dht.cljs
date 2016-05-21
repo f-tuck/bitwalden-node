@@ -9,12 +9,15 @@
 ; nodejs requirements
 (defonce debug ((nodejs/require "debug") "sharewode-node.dht"))
 (defonce DHT (nodejs/require "bittorrent-dht"))
-(defonce crypto (nodejs/require "crypto"))
 
-(defn sha1 [x]
-  (.digest (.update (.createHash crypto "sha1") x "utf8")))
-
-(def sharewode-dht-address (or (get js/process.argv 2) (sha1 "sharewode:v-alpha-1:public-node")))
+; API:
+; receive-updates-on hash
+; send-update-to hash
+; get-node-list hash
+; get-client-profile hash
+; set-client-profile hash content
+; get-torrent hash
+; seed-torrent content
 
 (defn add-peer! [dht infoHash peer]
   (let [peer-struct (js->clj peer)
@@ -26,7 +29,7 @@
                #{peer-struct})))
     (debug "peers for" infohash-string (clj->js @(dht :peers)))))
 
-(defn make-dht! [configuration]
+(defn make [configuration]
   (let [nodeId (@configuration "nodeId")
         peerId (@configuration "peerId")
         nodes (atom (or (@configuration "nodes") []))
@@ -56,10 +59,10 @@
         (swap! configuration assoc-in ["dht" "nodes"] (.toJSON dht-obj))
         ; tell the world we're ready to accept connections
         (debug "Announcing sharewode pool.")
-        (let [[error result-code] (<! (<<< #(.announce dht-obj sharewode-dht-address 8923 %)))]
+        (comment (let [[error result-code] (<! (<<< #(.announce dht-obj sharewode-dht-address 8923 %)))]
           (if error
             (debug "DHT announce error:" error)
-            (debug "DHT announce success:" result-code))))
+            (debug "DHT announce success:" result-code)))))
 
     (let [node-chan (<<< #(.on dht-obj "node" %))
           peer-chan (<<< #(.on dht-obj "peer" %))
@@ -88,3 +91,7 @@
       (go-loop [] (let [[err] (<! warning-chan)]
                     (debug "DHT warning:" err)
                     (recur))))))
+
+(defn subscribe [dht]
+  
+  )

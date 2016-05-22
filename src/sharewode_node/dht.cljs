@@ -1,7 +1,7 @@
 (ns sharewode-node.dht
-  (:require [sharewode-node.utils :refer [<<<]]
+  (:require [sharewode-node.utils :refer [<<< buffer]]
             [cljs.nodejs :as nodejs]
-            [cljs.core.async :refer [<! timeout]])
+            [cljs.core.async :refer [<! timeout chan close! put!]])
   (:require-macros [cljs.core.async.macros :refer [go go-loop]]))
 
 (nodejs/enable-util-print!)
@@ -19,16 +19,6 @@
 ; get-torrent hash
 ; seed-torrent content
 
-(defn add-peer! [dht infoHash peer]
-  (let [peer-struct (js->clj peer)
-        infohash-string (.toString infoHash "hex")]
-    (swap! (dht :peers) update-in [infohash-string]
-           (fn [old-value]
-             (if old-value
-               (conj old-value peer-struct)
-               #{peer-struct})))
-    (debug "peers for" infohash-string (clj->js @(dht :peers)))))
-
 (defn make [configuration]
   (let [nodeId (@configuration "nodeId")
         peerId (@configuration "peerId")
@@ -36,7 +26,15 @@
         dht-obj (DHT. #js {:nodeId nodeId})
         dht {:dht dht-obj
              :port (or (@configuration "port") nil)
-             :peers (atom {})}]
+             :ready-chan (chan)}]
+    
+    ; listen for the "ready" event and update our config, return on the chan
+    (go (<! (<<< #(.once dht-obj "ready" %)))
+        (debug "DHT ready!")
+        (debug "DHT port:" (.-port (.address dht-obj)))
+        (swap! configuration assoc-in ["dht" "port"] (.-port (.address dht-obj)))
+        (swap! configuration assoc-in ["dht" "nodes"] (.toJSON dht-obj))
+        (close! (dht :ready-chan)))
     
     ; this has to be a regular callback - not core.async
     ; because of the k-rpc architecture being async unfriendly
@@ -48,50 +46,31 @@
       (when (and (node "host") (node "port"))
         ;(debug "Adding previously known node:" node)
         (.addNode dht-obj (clj->js node))))
+    
     dht))
 
-(defn install-listeners! [dht configuration]
-  (let [dht-obj (dht :dht)]
-    (go (<! (<<< #(.once dht-obj "ready" %)))
-        (debug "DHT ready!")
-        (debug "DHT port:" (.-port (.address dht-obj)))
-        (swap! configuration assoc-in ["dht" "port"] (.-port (.address dht-obj)))
-        (swap! configuration assoc-in ["dht" "nodes"] (.toJSON dht-obj))
-        ; tell the world we're ready to accept connections
-        (debug "Announcing sharewode pool.")
-        (comment (let [[error result-code] (<! (<<< #(.announce dht-obj sharewode-dht-address 8923 %)))]
-          (if error
-            (debug "DHT announce error:" error)
-            (debug "DHT announce success:" result-code)))))
+; TODO: decouple the announce from the lookup *facepalm*
+; announce an infohash to the network and then return peers matching on a chan
+(defn announce [dht infoHash torrent-server-port]
+  ; make the DHT announcement    
+  (<<< #(.announce (dht :dht) infoHash torrent-server-port %)))
 
-    (let [node-chan (<<< #(.on dht-obj "node" %))
-          peer-chan (<<< #(.on dht-obj "peer" %))
-          announce-chan (<<< #(.on dht-obj "announce" %))
-          error-chan (<<< #(.on dht-obj "error" %))
-          warning-chan (<<< #(.on dht-obj "warning" %))]
+(defn lookup [dht infoHash]
+  (let [infoHash (buffer infoHash)
+        incoming-peer-chan (<<< #(.on (dht :dht) "peer" %))
+        peers-found-chan (chan)]
+    ; set up a listener for peers who match this infohash to return on the chan
+    (go-loop [] (let [[peer infoHash-incoming from] (<! incoming-peer-chan)
+                      peer (js->clj peer)
+                      infoHash-incoming-text (if infoHash-incoming (.toString infoHash-incoming "hex") nil)
+                      peer-host (peer "host")
+                      peer-port (peer "port")]
+                  ;(debug "Got peer:" peer-host peer-port infoHash-incoming-text (js->clj from))
+                  (when (= infoHash infoHash-incoming)
+                    ; if the channel is closed discontinue looping
+                    (if (put! peers-found-chan [[peer-host peer-port] infoHash-incoming from])
+                      (recur)))))
+    ; perform the actual lookup
+    (.lookup (dht :dht) infoHash)
+    peers-found-chan))
 
-      (go-loop [] (let [[node] (<! node-chan)]
-                    ;(js/console.log "Got node:" node)
-                    (swap! configuration assoc-in ["dht" "nodes"] (.toJSON dht-obj))
-                    (recur)))
-
-      (go-loop [] (let [[peer infoHash from] (<! peer-chan)]
-                    ; (debug "Got peer:" (.toString peer) (if infoHash (.toString infoHash "hex") "infoHash?") (js->clj from))
-                    (add-peer! dht infoHash peer)
-                    (recur)))
-
-      (go-loop [] (let [[peer infoHash] (<! announce-chan)]
-                    (debug "Announce:" peer (if infoHash (.toString infoHash "hex") "infoHash?"))
-                    (recur)))
-
-      (go-loop [] (let [[err] (<! error-chan)]
-                    (debug "DHT error:" err)
-                    (recur)))
-
-      (go-loop [] (let [[err] (<! warning-chan)]
-                    (debug "DHT warning:" err)
-                    (recur))))))
-
-(defn subscribe [dht]
-  
-  )

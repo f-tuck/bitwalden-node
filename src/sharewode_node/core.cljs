@@ -1,5 +1,5 @@
 (ns sharewode-node.core
-  (:require [sharewode-node.utils :refer [<<< sha1 to-json]]
+  (:require [sharewode-node.utils :refer [<<< sha1 to-json buf-hex]]
             [sharewode-node.config :as config]
             [sharewode-node.dht :as dht]
             ;[sharewode-node.bt :as bt]
@@ -8,6 +8,8 @@
             [cljs.core.async :refer [<! put! timeout]])
   (:require-macros [cljs.core.async.macros :refer [go go-loop]]))
 
+; nodejs requirements
+(defonce debug ((nodejs/require "debug") "sharewode-node.core"))
 (defonce crypto (nodejs/require "crypto"))
 
 (def client-string "-SW0001-")
@@ -78,31 +80,45 @@
         configuration (config/load configfile)
         nodeId (config/get-or-set! configuration "nodeId" (.toString (.randomBytes crypto 20) "hex"))
         peerId (config/get-or-set! configuration "peerId" (.toString (js/Buffer. (+ client-string (.randomBytes crypto 6))) "hex"))
+        ; data structures
+        announced-hashes-map (atom {}) ; infoHash -> :last timestamp
+        
         ; our service components
-        ;dht (dht/make configuration)
+        dht (dht/make configuration)
         ;bt (bt/make configuration)
         web (web/make configuration)]
+    
     (print "Sharewode server started.")
     (print "Bittorrent nodeId:" nodeId)
     (print "Bittorrent peerId:" peerId)
-    ;(print "Bittorrent DHT port:" (dht :port))
+    (print "Bittorrent DHT port:" (dht :port))
     ;(print "Bittorrent port:" (bt :port))
     (print "WebAPI port:" (web :port))
     
     ; when we exit we want to save the config
     (config/install-exit-handler configuration configfile)
     
-    ; tell the world we are available for connections
+    ; wait for the DHT to become ready
+    (go (<! (dht :ready-chan))
+        (print "DHT ready.")
+        ; tell the world we are available for connections and find some peers
+        (let [[error result-code] (<! (dht/announce dht sharewode-dht-address (web :port)))]
+          (if error
+            (debug "DHT announce error:" error)
+            (debug "DHT announce success:" result-code)))
+        ; lookup peers with the sharewode address
+        (let [sharewode-peers-chan (dht/lookup dht sharewode-dht-address)]
+          (go-loop []
+                   (let [[peer infoHash from] (<! sharewode-peers-chan)]
+                     (print "Found peer: " (buf-hex infoHash) peer))
+                   (recur))))
     
-    ;(dht/add-announce-hash! sharewode-address)
-    
-    ; handle json-rpc requests
+    ; handle json-rpc web requests
     (go-loop [] (let [[call req result-chan res] (<! (web :clients-chan))]
                   (print "web client recv:" call)
                   (cond
                     (= call "get-nodes") (put! result-chan [200 {:result "good"}])
                     :else (put! result-chan [404 false]))
-                  
                   (recur)))
     
     ; handle bittorrent peer requests

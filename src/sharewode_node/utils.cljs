@@ -21,3 +21,8 @@
 (defn from-json [x]
   (js->clj (js/JSON.parse x)))
 
+(defn buffer [x]
+  (if (string? x) (js/Buffer. x "hex") x))
+
+(defn buf-hex [b]
+  (.toString b "hex"))

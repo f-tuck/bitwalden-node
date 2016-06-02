@@ -9,6 +9,7 @@
   (:require-macros [cljs.core.async.macros :refer [go go-loop]]))
 
 ; nodejs requirements
+(.install (nodejs/require "source-map-support"))
 (defonce debug ((nodejs/require "debug") "sharewode-node.core"))
 (defonce crypto (nodejs/require "crypto"))
 

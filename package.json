@@ -9,6 +9,7 @@
     "body-parser": "^1.15.1",
     "cookie-parser": "^1.4.1",
     "express": "^4.13.4",
+    "source-map-support": "^0.4.0",
     "webtorrent": "^0.72.2"
   },
   "devDependencies": {

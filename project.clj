@@ -34,4 +34,5 @@
                 :output-to "build/sharewode-server-node.js"
                 :output-dir "build"
                 :target :nodejs
+                :source-map "build/sharewode-server-node.js.map"
                 :optimizations :simple}}]})

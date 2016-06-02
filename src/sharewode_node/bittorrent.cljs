@@ -107,17 +107,16 @@
 (defn connect-to-peer [host port infoHash peerId]
   (let [received-peers-chan (chan)
         socket (.connect net #js {:host host :port port})]
-    (print host port (buf-hex infoHash) "connecting outgoing socket - bleep")
+    (print host port (buf-hex infoHash) "connecting outgoing socket")
     ; once the socket connects turn it into a wire and handshake
     (go
       (catch-socket-errors socket host port)
       (let [connect-chan (<<< #(.once socket "connect" %))
             timeout-chan (timeout connection-timeout)]
         (let [[v p] (alts! [connect-chan timeout-chan])]
-          (print host port (buf-hex infoHash) "socket waiting chan fired")
           (if (= p connect-chan)
             (do (print host port (buf-hex infoHash) "outgoing socket connected")
                 (make-peer received-peers-chan socket peerId infoHash))
-            (do (print host port (buf-hex infoHash) "connection to timed out")
+            (do (print host port (buf-hex infoHash) "connection timed out")
                 (close! received-peers-chan))))))
     received-peers-chan))

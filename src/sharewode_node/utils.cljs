@@ -26,3 +26,6 @@
 
 (defn buf-hex [b]
   (.toString b "hex"))
+
+(defn timestamp-now []
+  (.getTime (js/Date.)))

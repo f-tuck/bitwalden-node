@@ -49,12 +49,12 @@
     
     dht))
 
-; TODO: decouple the announce from the lookup *facepalm*
-; announce an infohash to the network and then return peers matching on a chan
+; announce an infohash to the network
 (defn announce [dht infoHash torrent-server-port]
-  ; make the DHT announcement    
+  ; make the DHT announcement
   (<<< #(.announce (dht :dht) infoHash torrent-server-port %)))
 
+; look up peers for an infoHash
 (defn lookup [dht infoHash]
   (let [infoHash (buffer infoHash)
         incoming-peer-chan (<<< #(.on (dht :dht) "peer" %))
@@ -66,10 +66,12 @@
                       peer-host (peer "host")
                       peer-port (peer "port")]
                   ;(debug "Got peer:" peer-host peer-port infoHash-incoming-text (js->clj from))
-                  (when (= infoHash infoHash-incoming)
-                    ; if the channel is closed discontinue looping
-                    (if (put! peers-found-chan [[peer-host peer-port] infoHash-incoming from])
-                      (recur)))))
+                  (if (and
+                        (= infoHash infoHash-incoming)
+                        (put! peers-found-chan [[peer-host peer-port] infoHash-incoming from]))
+                      (recur)
+                      ; make sure the channel is closed and discontinue looping
+                      (close! peers-found-chan))))
     ; perform the actual lookup
     (.lookup (dht :dht) infoHash)
     peers-found-chan))

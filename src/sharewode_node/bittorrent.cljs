@@ -20,13 +20,23 @@
       (.destroy socket))
   socket)
 
+(defn destroy-peer [host port to-peer-chan from-peer-chan socket wire]
+  (print host port "destroy - closing chans")
+  (put! from-peer-chan {:type :close})
+  (close! to-peer-chan)
+  (close! from-peer-chan)
+  (print host port "destroy - socket")
+  (.destroy socket)
+  (print host port "destroy - wire")
+  (.destroy wire))
+
 (defn make-peer [received-peers-chan socket peerId-mine infoHash-outgoing]
   (let [wire (bittorrent.)
         to-peer-chan (chan)
         from-peer-chan (chan)
         host (.-remoteAddress socket)
         port (.-remotePort socket)
-        destroy (fn [] (print host port "destroy - closing chans") (close! to-peer-chan) (close! from-peer-chan) (print host port "destroy - socket") (.destroy socket) (print host port "destroy - wire") (.destroy wire))]
+        destroy (partial destroy-peer host port to-peer-chan from-peer-chan socket wire)]
     ; catch socket errors (again) and destroy
     (go (alts! (for [n ["error" "timeout" "close" "end"]] (<<< #(.once socket n %))))
         (print host port "destroying wire/socket because of socket error")

@@ -5,7 +5,7 @@
             [sharewode-node.bittorrent :as bittorrent]
             [sharewode-node.web :as web]
             [cljs.nodejs :as nodejs]
-            [cljs.core.async :refer [<! put! timeout alts!]])
+            [cljs.core.async :refer [<! put! timeout alts! close!]])
   (:require-macros [cljs.core.async.macros :refer [go go-loop]]))
 
 ; nodejs requirements
@@ -70,10 +70,15 @@
     (defn receive-peer [peer]
       (print (peer :host) (peer :port) "receive-peer")
       (let [peer-tuple (map peer [:infoHash :peerId])]
-        (when (nil? (@peers peer-tuple))
-          (swap! peers assoc peer-tuple peer)
-          (print "*** peer made it through handshake" peer)
-          (print (count @peers) "peers connected"))))
+        (if (nil? (@peers peer-tuple))
+          (do
+            (swap! peers assoc peer-tuple peer)
+            (print "*** peer made it through handshake" peer)
+            (print (count @peers) "peers connected"))
+          (do
+            (print "*** already have this peer - destroying" peer)
+            (close! (peer :to-peer))
+            (close! (peer :from-peer))))))
     
     ; loop that watches peer list
 

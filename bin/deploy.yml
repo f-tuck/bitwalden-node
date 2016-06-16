@@ -1,0 +1,9 @@
+---
+- hosts: all
+  tasks:
+    - name: Copy files over
+      synchronize: src={{src}} dest={{dest|default('~/sharewode-node')}} delete=yes recursive=yes rsync_opts="--exclude 'node*' --exclude '.*.swp' --exclude '.git/'"
+    
+    - name: Run make to ensure nodeenv is set up
+      shell: make chdir=sharewode-node creates=build/sharewode-server-node.js
+

@@ -37,6 +37,9 @@
         ;subscribed-hashes (atom {}) ; infoHash -> :last-announce timestamp :peer-ids [] :client-pubkeys []
         peer-candidates (atom {}) ; [infoHash host port] -> :timestamp t
         peers (atom {}) ; [infoHash peerId] -> :infoHash i :peerId p :host h :port p :from-peer chan :to-peer chan
+        listeners (atom {}) ; infoHash -> [chans...]
+        client-queues (atom {}) ; clientKey -> [{:timestamp ... :message ...} ...]
+        test-clients (atom {})
         
         ; our service components
         dht (dht/make configuration)
@@ -123,9 +126,25 @@
     ; handle json-rpc web requests
     (go-loop [] (let [[call req result-chan res] (<! (web :requests-chan))]
                   (print "web client recv:" call)
-                  (cond
-                    (= call "get-nodes") (put! result-chan [200 {:result "good"}])
-                    :else (put! result-chan [404 false]))
+                  (go
+                    (cond
+                      ; the "get-nodes" test call
+                      (= call "ping") (if (put! result-chan [200 {:result "pong!"}]) (print "ping sent") (print "ping failed"))
+                      ; the RPC call to return the current contents of the queue
+                      ; if the queue is empty this will block until a value arrives in the queue or the client socket closes
+                      (= call "get-queue") (when true ; (and (web/authenticate req) (web/pow-check req))
+                                             (let [k (web/param req "k")
+                                                   client (web/ensure-client-chan! client-queues k)]
+                                               ; launch a test client
+                                               (swap! test-clients update-in k web/make-test-client (client :chan))
+                                               (let [r (<! (web/tap-client-chan (web/param req "after") (deref (client :queue)) (client :mult)))]
+                                                 (print "about to send:" r)
+                                                 (if (put! result-chan [200 r])
+                                                   (print "top level: sent value")
+                                                   (print "top level: send failed!"))))
+                                             ;(web/snip-client-queue! client-queues req)
+                                             )
+                      :else (put! result-chan [404 false])))
                   (recur)))))
 
 (set! *main-cli-fn* -main)

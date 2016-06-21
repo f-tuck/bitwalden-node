@@ -27,7 +27,7 @@
 
 (defn make [configuration]
   (let [app (express)
-        clients-chan (chan)]
+        requests-chan (chan)]
     
     ; thread that runs every second and flushes old messages and clients
     (go-loop []
@@ -55,7 +55,7 @@
                (let [[req res cb] (<! request-chan)
                      result-chan (chan)]
                  ; tell listening channel we have an incoming client request
-                 (put! clients-chan [(param req "c") req result-chan res])
+                 (put! requests-chan [(param req "c") req result-chan res])
                  ; check if there is anything on the return channel for this client and copy it into their outgoing queue
                  (let [[code response & [headers]] (<! result-chan)]
                    (write-header res code headers)
@@ -65,5 +65,5 @@
     ; serve
     (.listen app port)
     
-    {:server app :port port :clients-chan clients-chan}))
+    {:server app :port port :requests-chan requests-chan}))
 

@@ -121,7 +121,7 @@
                   (recur)))
     
     ; handle json-rpc web requests
-    (go-loop [] (let [[call req result-chan res] (<! (web :clients-chan))]
+    (go-loop [] (let [[call req result-chan res] (<! (web :requests-chan))]
                   (print "web client recv:" call)
                   (cond
                     (= call "get-nodes") (put! result-chan [200 {:result "good"}])

@@ -1,7 +1,7 @@
 CLJS=$(wildcard src/**/**.cljs)
 NPM=./build/node/bin/npm
 NODE=./build/node/bin/node
-NODE_VERSION=5.5.0
+NODE_VERSION=4.4.6
 NODEENV_VERSION=0.13.6
 
 default: deps build

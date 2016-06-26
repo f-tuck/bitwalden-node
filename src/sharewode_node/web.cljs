@@ -21,8 +21,8 @@
   (.writeHead res code (clj->js (merge {"Content-Type" "application/json"} headers))))
 
 (defn param [req k]
-  (or (aget (.-query req) k)
-      (aget (.-body req) k)))
+  (or (js/unescape (aget (.-query req) k))
+      (js/unescape (aget (.-body req) k))))
 
 (defn make [configuration]
   (let [app (express)

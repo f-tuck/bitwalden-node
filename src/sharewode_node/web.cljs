@@ -13,6 +13,7 @@
 (defonce url (nodejs/require "url"))
 (defonce cookie (nodejs/require "cookie-parser"))
 (defonce body-parser (nodejs/require "body-parser"))
+(defonce ed (nodejs/require "ed25519-supercop"))
 
 (defonce port 8923)
 (defonce path "/sw")
@@ -23,6 +24,9 @@
 (defn param [req k]
   (or (js/unescape (aget (.-query req) k))
       (js/unescape (aget (.-body req) k))))
+
+(defn param-buf [req k]
+  (js/Buffer. (param req k) "ascii"))
 
 (defn make [configuration]
   (let [app (express)
@@ -153,8 +157,8 @@
   (@client-queues (param req "k")))
 
 (defn authenticate [req]
-  (let [public-key (param req "k")
-        signature (param req "s")
-        packet (param req "p")]
-    ; (verify k s p))
-    true))
+  (let [public-key (param-buf req "k")
+        signature (param-buf req "s")
+        packet (param-buf req "p")]
+    (.verify ed signature packet public-key)))
+

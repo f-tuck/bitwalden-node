@@ -12,7 +12,6 @@
 (.install (nodejs/require "source-map-support"))
 (defonce debug ((nodejs/require "debug") "sharewode-node.core"))
 (defonce crypto (nodejs/require "crypto"))
-(defonce ed (nodejs/require "ed25519-supercop"))
 
 (def client-string "-SW0001-")
 (def infoHash-sharewode-dht-address (sha1 "sharewode:v-alpha-1:public-node"))
@@ -130,12 +129,9 @@
                   (go
                     (cond
                       ; simple test to see if the web interface is up
-                      (= call "ping") (put! result-chan [200 {:result "pong"}])
+                      (= call "ping") (put! result-chan [200 "pong"])
                       ; test whether a particular signature verifies with supercop
-                      (= call "verify") (put! result-chan [200 {:result (.verify ed
-                                                                                 (js/Buffer. (web/param req "s") "ascii")
-                                                                                 (js/Buffer. (web/param req "v") "ascii")
-                                                                                 (js/Buffer. (web/param req "k") "ascii"))}])
+                      (= call "authenticate") (put! result-chan [200 (web/authenticate req)])
                       ; the RPC call to return the current contents of the queue
                       ; if the queue is empty this will block until a value arrives in the queue or the client socket closes
                       (= call "get-queue") (when true ; (and (web/authenticate req) (web/pow-check req))

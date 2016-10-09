@@ -124,28 +124,15 @@
                   (recur)))
     
     ; handle json-rpc web requests
-    (go-loop [] (let [[call req result-chan res] (<! (web :requests-chan))]
+    (go-loop [] (let [[call params req res result-chan] (<! (web :requests-chan))]
                   (print "web client recv:" call)
                   (go
                     (cond
                       ; simple test to see if the web interface is up
                       (= call "ping") (put! result-chan [200 "pong"])
                       ; test whether a particular signature verifies with supercop
-                      (= call "authenticate") (put! result-chan [200 (web/authenticate req)])
-                      ; the RPC call to return the current contents of the queue
-                      ; if the queue is empty this will block until a value arrives in the queue or the client socket closes
-                      (= call "get-queue") (when true ; (and (web/authenticate req) (web/pow-check req))
-                                             (let [k (web/param req "k")
-                                                   client (web/ensure-client-chan! client-queues k)]
-                                               ; launch a test client
-                                               (swap! test-clients update-in k web/make-test-client (client :chan))
-                                               (let [r (<! (web/tap-client-chan (web/param req "after") (deref (client :queue)) (client :mult)))]
-                                                 (print "about to send:" r)
-                                                 (if (put! result-chan [200 r])
-                                                   (print "top level: sent value")
-                                                   (print "top level: send failed!"))))
-                                             ;(web/snip-client-queue! client-queues req)
-                                             )
+                      (= call "authenticate") (put! result-chan [200 (web/authenticate params)])
+                      ; call endpoint not known
                       :else (put! result-chan [404 false])))
                   (recur)))))
 

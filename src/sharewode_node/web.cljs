@@ -14,19 +14,14 @@
 (defonce cookie (nodejs/require "cookie-parser"))
 (defonce body-parser (nodejs/require "body-parser"))
 (defonce ed (nodejs/require "ed25519-supercop"))
+(defonce bs58 (nodejs/require "bs58"))
+(defonce bencode (nodejs/require "bencode"))
 
 (defonce port 8923)
 (defonce path "/sw")
 
 (defn write-header [res code & [headers]]
   (.writeHead res code (clj->js (merge {"Content-Type" "application/json"} headers))))
-
-(defn param [req k]
-  (or (js/unescape (aget (.-query req) k))
-      (js/unescape (aget (.-body req) k))))
-
-(defn param-buf [req k]
-  (js/Buffer. (param req k) "ascii"))
 
 (defn make [configuration]
   (let [app (express)
@@ -56,14 +51,14 @@
 
       (go-loop []
                (let [[req res cb] (<! request-chan)
-                     result-chan (chan)]
-                 ; if the client disconnects close the sending channel
+                     result-chan (chan)
+                     params (js->clj (.-body req))]
                  (.on req "close"
                       (fn []
                         (print "Closing result-chan")
                         (close! result-chan)))
                  ; tell listening channel we have an incoming client request
-                 (put! requests-chan [(param req "c") req result-chan res])
+                 (put! requests-chan [(get params "c") params req res result-chan])
                  ; check if there is anything on the return channel for this client and copy it into their outgoing queue
                  (go
                    (let [[code response & [headers]] (<! result-chan)]
@@ -153,12 +148,22 @@
             (close! c)))))
     c))
 
-(defn get-chan [client-queues req]
-  (@client-queues (param req "k")))
+(defn pow-check [req]
+  true)
 
-(defn authenticate [req]
-  (let [public-key (param-buf req "k")
-        signature (param-buf req "s")
-        packet (param-buf req "p")]
+(defn authenticate [params]
+  (let [public-key (-> params
+                       (get "k")
+                       (bs58.decode)
+                       (js/Buffer.))
+        signature (-> params
+                      (get "s")
+                      (js/Buffer. "base64")
+                      (.toString "hex"))
+        packet (-> params
+                   (dissoc "s")
+                   (clj->js)
+                   (bencode.encode)
+                   (js/Buffer.))]
     (.verify ed signature packet public-key)))
 

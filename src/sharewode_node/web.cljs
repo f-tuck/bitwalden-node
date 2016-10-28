@@ -1,5 +1,5 @@
 (ns sharewode-node.web
-  (:require [sharewode-node.utils :refer [<<< to-json buf-hex timestamp-now]]
+  (:require [sharewode-node.utils :refer [<<< to-json buf-hex timestamp-now pr-thru]]
             [cljs.nodejs :as nodejs]
             [cljs.core.async :refer [<! put! timeout chan sliding-buffer close! mult tap untap]])
   (:require-macros [cljs.core.async.macros :refer [go go-loop]]))
@@ -30,7 +30,7 @@
     ; thread that runs every second and flushes old messages and clients
     (go-loop []
              (<! (timeout 1000))
-             ;:w(debug "Flushing client queues.")
+             ;(debug "Flushing client queues.")
              ; TODO: this.
              (recur))
     
@@ -76,76 +76,61 @@
   (or
     existing-client
     (let [c (chan)
-          m (mult c)
-          q (atom [])
-          client-tap-chan (chan)
-          client-tap (tap m client-tap-chan)]
-      (print "creating new client chan")
+          q (atom []) 
+          listeners (atom #{})]
+      ;(print "creating new client chan")
       (go-loop []
-               (print "pre-message")
-               (let [message (<! client-tap)]
-                 (print "for client" message)
-                 (swap! q conj (assoc message :timestamp (timestamp-now)))
+               ;(print "client chan waiting for message")
+               (let [message (<! c)
+                     queued-message {:payload message :timestamp (timestamp-now)}]
                  (if message
-                   (recur)
+                   (do ;(print "client chan got" message)
+                       (swap! q conj queued-message)
+                       ; also send the message through to any listening channels
+                       ;(print "listeners" @listeners)
+                       (doall (map #(put! % [queued-message]) @listeners))
+                       (recur))
+                   ; somebody has closed the client channel
                    (do
-                     (print "destroying client")
-                     (untap m client-tap)
-                     (close! client-tap)
-                     (close! client-tap-chan)))))
-      {:chan c :mult m :queue q})))
+                     ;(print "destroying client chan")
+                     (close! c)))))
+      {:chan-to-client c :chans-from-client listeners :queue q})))
 
-(defn ensure-client-chan! [client-queues-atom k]
+(defn ensure-client-chan! [client-queues-atom uuid pkey]
   ; insert a newly created client or the old one and return it
-  (get
-    (swap! client-queues-atom update-in [k] get-or-create-client!)
-    k))
+  (let [k [pkey uuid]]
+    (print "Client:" k)
+    (get
+      (swap! client-queues-atom update-in [k] get-or-create-client!)
+      k)))
 
-(defn make-test-client [existing-client send-chan]
-  (print "hullo")
-  (when (not existing-client)
-    ; launch our psuedo thingy once
-    (print "creating test client!")
-    (go-loop []
-             (let [howlong (* (js/Math.random) 10000)
-                   howmany (+ (int (* (js/Math.random) 3)) 1)]
-               ;(print "how long?" howlong "how many?" howmany)
-               (<! (timeout howlong))
-               (let [v (js/Math.random)]
-                 (print "sending" v)
-                 (if (put! send-chan {:test-hello v})
-                   (recur)
-                   (print "test-client: couldn't send!"))))))
-  true)
-
-(defn get-pending-messages [after q]
+(defn get-pending-messages [q after]
   (filter #(> (% :timestamp) after) q))
 
-(defn tap-client-chan [after q m]
-  (print "tap client chan")
-  (let [c (chan)
-        messages (get-pending-messages after q)]
-    (if messages (print "messages waiting:" messages))
+(defn close-client-listener! [listeners c]
+  (close! c)
+  (swap! listeners disj c))
+
+(defn client-chan-listen! [after client]
+  (print "client-chan-listen!")
+  (let [q (client :queue)
+        listeners (client :chans-from-client)
+        c (chan)
+        ; clip the previous values on the queue
+        messages (swap! q get-pending-messages after)]
+    ; add our listener chan to the client set of listeners
+    (swap! listeners conj c)
+    (print "listeners:" listeners)
+    (print "messages waiting:" messages)
     ; if there are messages waiting on the queue for this client
     (if (> (count messages) 0)
-      ; send them through
-      (put! c messages)
-      ; otherwise wait for messages or a timeout to send
-      (let [t (timeout 30000)
-            client-dup-chan (chan)
-            client-tap (tap m client-dup-chan)]
-        (print "creating tap chan")
-        (go
-          (let [[v p] (alts! [client-tap t])]
-            (if v
-              (if (put! c v)
-                (print "tap-client send success")
-                (print "tap-client send failed")))
-            (print "destroying tap chan")
-            (untap m client-tap)
-            (close! client-dup-chan)
-            (close! client-tap)
-            (close! c)))))
+      ; send them through and close
+      (do (put! c messages)
+          (close-client-listener! listeners c)))
+    ; insurance - wait for a timeout and close and remove the channel we made
+    (go
+      (<! (timeout 30000))
+      (close-client-listener! listeners c)) 
     c))
 
 (defn pow-check [req]

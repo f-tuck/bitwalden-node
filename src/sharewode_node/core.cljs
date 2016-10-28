@@ -124,7 +124,7 @@
                   (recur)))
     
     ; handle json-rpc web requests
-    (go-loop [] (let [[call params req res result-chan] (<! (web :requests-chan))]
+    (go-loop [] (let [[call params req res result-chan res] (<! (web :requests-chan))]
                   (print "web client recv:" call)
                   (go
                     (cond
@@ -132,7 +132,30 @@
                       (= call "ping") (put! result-chan [200 "pong"])
                       ; test whether a particular signature verifies with supercop
                       (= call "authenticate") (put! result-chan [200 (web/authenticate params)])
-                      ; call endpoint not known
+                      ; client test rig
+                      (= call "client-test") (if (web/authenticate params) ;(and (web/authenticate req) (web/pow-check req))
+                                               (let [pkey (get params "k")
+                                                     uuid (get params "u")
+                                                     client (web/ensure-client-chan! client-queues uuid pkey)]
+                                                 ; launch a test client
+                                                 ; (swap! test-clients update-in k web/make-test-client (client :chan))
+                                                 (go (<! (timeout 5000))
+                                                     (put! (client :chan-to-client) (get params "p")))
+                                                 (put! result-chan [200 true]))
+                                               (put! result-chan [403 false]))
+                      ; the RPC call to return the current contents of the queue
+                      ; if the queue is empty this will block until a value arrives in the queue or the client socket closes
+                      (= call "get-queue") (do (print "get-queue call") (if (web/authenticate params)
+                                                                          (let [pkey (get params "k")
+                                                                                uuid (get params "u")
+                                                                                client (web/ensure-client-chan! client-queues uuid pkey)]
+                                                                            (let [c (web/client-chan-listen! (get params "after") client)
+                                                                                  r (<! c)]
+                                                                              (print "about to send:" r)
+                                                                              (if (put! result-chan [200 r])
+                                                                                (print "top level: sent value")
+                                                                                (print "top level: send failed!"))))
+                                                                          (put! result-chan [403 false])))
                       :else (put! result-chan [404 false])))
                   (recur)))))
 

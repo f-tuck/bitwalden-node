@@ -151,7 +151,7 @@
                                                                                 client (web/ensure-client-chan! client-queues uuid pkey)]
                                                                             (let [c (web/client-chan-listen! (get params "after") client)
                                                                                   r (<! c)]
-                                                                              (print "about to send:" r)
+                                                                              ;(print "about to send:" r)
                                                                               (if (put! result-chan [200 r])
                                                                                 (print "top level: sent value")
                                                                                 (print "top level: send failed!"))))

@@ -73,6 +73,7 @@
     {:server app :port port :requests-chan requests-chan}))
 
 (defn get-or-create-client! [existing-client]
+  (print "existing-client?" (if existing-client "yes" "no"))
   (or
     existing-client
     (let [c (chan)

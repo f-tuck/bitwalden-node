@@ -9,6 +9,7 @@
 ; nodejs requirements
 (defonce debug ((nodejs/require "debug") "sharewode-node.dht"))
 (defonce DHT (nodejs/require "bittorrent-dht"))
+(defonce bs58 (nodejs/require "bs58"))
 
 ; API:
 ; receive-updates-on hash
@@ -75,4 +76,14 @@
     ; perform the actual lookup
     (.lookup (dht :dht) infoHash)
     peers-found-chan))
+
+(defn put-value [dht value public-key-b58 salt seq-id signature-b64]
+  (let [put-params {:k (-> public-key-b58 (bs58.decode) (js/Buffer.))
+                    :salt (js/Buffer. salt)
+                    :seq seq-id
+                    :v (js/Buffer. value)
+                    :sign (fn [buf] (js/Buffer. signature-b64 "base64"))}]
+    (<<< #(.put (dht :dht)
+                (clj->js put-params)
+                %))))
 

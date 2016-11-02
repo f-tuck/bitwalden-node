@@ -1,7 +1,7 @@
 (ns sharewode-node.core
   (:require [sharewode-node.utils :refer [<<< sha1 to-json buf-hex timestamp-now]]
             [sharewode-node.config :as config]
-            [sharewode-node.dht :as dht]
+            [sharewode-node.dht :as dht :refer [put-value]]
             [sharewode-node.bittorrent :as bittorrent]
             [sharewode-node.web :as web]
             [cljs.nodejs :as nodejs]
@@ -61,6 +61,7 @@
     ; * gossip-sending some message to a given swarm
     ; * receiving messages from some given swarm by gossip
     
+    ; * setting the profile of some pubkey + salt + sig
     ; * getting the profile of some pubkey + salt
     ; * getting the content of some infoHash
     ; * seeding the content of some infoHash
@@ -143,6 +144,20 @@
                                                      (put! (client :chan-to-client) (get params "p")))
                                                  (put! result-chan [200 true]))
                                                (put! result-chan [403 false]))
+                      ; DHT put (BEP 0044)
+                      (= call "dht-put") (if (web/authenticate params)
+                                           (let [pkey (get params "k")
+                                                 uuid (get params "u")
+                                                 client (web/ensure-client-chan! client-queues uuid pkey)]
+                                             (go (put! (client :chan-to-client)
+                                                       (<! (put-value dht
+                                                                      (get params "v")
+                                                                      (get params "k")
+                                                                      (get params "salt")
+                                                                      (get params "seq")
+                                                                      (get params "s.dht")))))
+                                             (put! result-chan [200 true]))
+                                           (put! result-chan [403 false]))
                       ; the RPC call to return the current contents of the queue
                       ; if the queue is empty this will block until a value arrives in the queue or the client socket closes
                       (= call "get-queue") (do (print "get-queue call") (if (web/authenticate params)

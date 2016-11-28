@@ -77,6 +77,13 @@
     (.lookup (dht :dht) infoHash)
     peers-found-chan))
 
+; get a value from a DHT address (BEP44)
+(defn get-value [dht infoHash]
+  (js/console.log "incoming infoHash" infoHash)
+  (let [infoHash (js/Buffer. infoHash "hex")]
+    (<<< #(.get (dht :dht) infoHash %))))
+
+; put a value into the DHT (BEP44)
 (defn put-value [dht value public-key-b58 salt seq-id signature-b64]
   (let [put-params {:k (-> public-key-b58 (bs58.decode) (js/Buffer.))
                     :salt (js/Buffer. salt)

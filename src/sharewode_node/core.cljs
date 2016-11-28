@@ -1,7 +1,7 @@
 (ns sharewode-node.core
   (:require [sharewode-node.utils :refer [<<< sha1 to-json buf-hex timestamp-now]]
             [sharewode-node.config :as config]
-            [sharewode-node.dht :as dht :refer [put-value]]
+            [sharewode-node.dht :as dht :refer [put-value get-value]]
             [sharewode-node.bittorrent :as bittorrent]
             [sharewode-node.web :as web]
             [cljs.nodejs :as nodejs]
@@ -156,6 +156,15 @@
                                                                       (get params "salt")
                                                                       (get params "seq")
                                                                       (get params "s.dht")))))
+                                             (put! result-chan [200 true]))
+                                           (put! result-chan [403 false]))
+                      ; do a dht get (BEP 0044)
+                      (= call "dht-get") (if (web/authenticate params)
+                                           (let [pkey (get params "k")
+                                                 uuid (get params "u")
+                                                 client (web/ensure-client-chan! client-queues uuid pkey)]
+                                             (go (put! (client :chan-to-client)
+                                                       (<! (get-value dht (get params "infohash")))))
                                              (put! result-chan [200 true]))
                                            (put! result-chan [403 false]))
                       ; the RPC call to return the current contents of the queue

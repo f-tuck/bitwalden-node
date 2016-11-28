@@ -122,7 +122,7 @@
     ; add our listener chan to the client set of listeners
     (swap! listeners conj c)
     (print "listeners:" listeners)
-    (print "messages waiting:" messages)
+    (print "messages waiting:" (count messages))
     ; if there are messages waiting on the queue for this client
     (if (> (count messages) 0)
       ; send them through and close

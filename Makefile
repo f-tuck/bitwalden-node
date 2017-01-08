@@ -1,7 +1,7 @@
 CLJS=$(wildcard src/**/**.cljs)
 NPM=./build/node/bin/npm
 NODE=./build/node/bin/node
-NODE_VERSION=4.4.6
+NODE_VERSION=7.2.0
 NODEENV_VERSION=0.13.6
 
 default: deps build
@@ -20,7 +20,7 @@ $(NODE) $(NPM): build/nodeenv-src/nodeenv.py
 	find build/node -exec touch {} \;
 
 node_modules: build/node/bin/npm package.json
-	./build/node/bin/npm install
+	. ./build/node/bin/activate && npm install
 
 node_modules/webtorrent/webtorrent.min.js: node_modules
 

@@ -3,17 +3,14 @@
   "version": "0.1.0",
   "private": "true",
   "dependencies": {
-    "bencode": "^0.10.0",
-    "bittorrent-dht": "^7.2.2",
-    "bittorrent-protocol": "^2.1.5",
     "body-parser": "^1.15.1",
     "bs58": "^3.0.0",
     "cookie-parser": "^1.4.1",
-    "debug": "^2.2.0",
+    "debug": "^2.6.0",
     "ed25519-supercop": "^1.0.2",
     "express": "^4.13.4",
     "source-map-support": "^0.4.0",
-    "webtorrent": "^0.72.2"
+    "webtorrent": "^0.81.0"
   },
   "devDependencies": {
     "source-map-support": "0.4.0",

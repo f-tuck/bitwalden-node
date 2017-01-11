@@ -14,8 +14,14 @@ else
     then
       date;
       make;
-      echo ./bin/deploy-to.sh ${1}
-      ./bin/deploy-to.sh ${1}
+      OIFS="${IFS}"
+      IFS=','
+      for server in ${1}
+      do
+        echo "Syncing to ${server}:"
+        rsync -avz ./ ${server}:~/sharewode-node/ --delete --recursive --exclude 'node*' --exclude '.*.swp' --exclude '.git/'
+      done
+      IFS=${OIFS}
       echo "Done."
     fi
     sleep 0.5;

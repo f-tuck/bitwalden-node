@@ -12,6 +12,10 @@
                              ([& x] (put! c x)))]))
     c))
 
+(defn pr-thru [x & [message]]
+  (print message x)
+  x)
+
 (defn sha1 [x]
   (.digest (.update (.createHash crypto "sha1") x "utf8")))
 

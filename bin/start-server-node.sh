@@ -13,10 +13,12 @@ do
   esac
 done
 
+. ./build/node/bin/activate
+
 if [ "$DEVMODE" = "1" ]
 then
   echo "Starting server in dev mode."
-  ./build/node/bin/node target/server_dev/sharewode_node.js $@
+  node target/server_dev/sharewode_node.js $@
 else
-  ./build/node/bin/node build/sharewode-server-node.js $@
+  node build/sharewode-server-node.js $@
 fi

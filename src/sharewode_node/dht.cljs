@@ -11,45 +11,6 @@
 (defonce DHT (nodejs/require "bittorrent-dht"))
 (defonce bs58 (nodejs/require "bs58"))
 
-; API:
-; receive-updates-on hash
-; send-update-to hash
-; get-node-list hash
-; get-client-profile hash
-; set-client-profile hash content
-; get-torrent hash
-; seed-torrent content
-
-(defn make [configuration]
-  (let [nodeId (@configuration "nodeId")
-        peerId (@configuration "peerId")
-        nodes (atom (or (@configuration "nodes") []))
-        dht-obj (DHT. #js {:nodeId nodeId})
-        dht {:dht dht-obj
-             :port (or (@configuration "port") nil)
-             :ready-chan (chan)}]
-    
-    ; listen for the "ready" event and update our config, return on the chan
-    (go (<! (<<< #(.once dht-obj "ready" %)))
-        (debug "DHT ready!")
-        (debug "DHT port:" (.-port (.address dht-obj)))
-        (swap! configuration assoc-in ["dht" "port"] (.-port (.address dht-obj)))
-        (swap! configuration assoc-in ["dht" "nodes"] (.toJSON dht-obj))
-        (close! (dht :ready-chan)))
-    
-    ; this has to be a regular callback - not core.async
-    ; because of the k-rpc architecture being async unfriendly
-    ; (binds immediately on a port if we don't do it here)
-    (.listen dht-obj (dht :port) (fn [] (debug "listening")))
-    
-    ; add our previously known nodes to get the DHT ready faster
-    (doseq [node @nodes]
-      (when (and (node "host") (node "port"))
-        ;(debug "Adding previously known node:" node)
-        (.addNode dht-obj (clj->js node))))
-    
-    dht))
-
 ; announce an infohash to the network
 (defn announce [dht infoHash torrent-server-port]
   ; make the DHT announcement
@@ -79,9 +40,8 @@
 
 ; get a value from a DHT address (BEP44)
 (defn get-value [dht infoHash]
-  (js/console.log "incoming infoHash" infoHash)
   (let [infoHash (js/Buffer. infoHash "hex")]
-    (<<< #(.get (dht :dht) infoHash %))))
+    (<<< #(.get dht infoHash %))))
 
 ; put a value into the DHT (BEP44)
 (defn put-value [dht value public-key-b58 salt seq-id signature-b64]
@@ -90,7 +50,7 @@
                     :seq seq-id
                     :v (js/Buffer. value)
                     :sign (fn [buf] (js/Buffer. signature-b64 "base64"))}]
-    (<<< #(.put (dht :dht)
+    (<<< #(.put dht
                 (clj->js put-params)
                 %))))
 

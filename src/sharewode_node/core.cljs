@@ -111,6 +111,16 @@
                                                      (put! (client :chan-to-client) (get params "p")))
                                                  (put! result-chan [200 true]))
                                                (put! result-chan [403 false]))
+                      (= call "seed") (if (web/authenticate params)
+                                        (let [pkey (get params "k")
+                                              uuid (get params "u")
+                                              client (web/ensure-client-chan! client-queues uuid pkey)]
+                                          (go (put! (client :chan-to-client)
+                                                    (<! (torrent/seed bt
+                                                                      (get params "name")
+                                                                      (get params "content")))))
+                                          (put! result-chan [200 true]))
+                                        (put! result-chan [403 false]))
                       ; DHT put (BEP 0044)
                       (= call "dht-put") (if (web/authenticate params)
                                            (let [pkey (get params "k")

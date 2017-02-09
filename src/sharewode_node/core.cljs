@@ -73,19 +73,18 @@
     ; swarm/get-peer-list swarm-atom infoHash
 
     ; handle any messages that come in from bittorrent swarms
-    
+
     (go-loop [] (let [[infoHash peerId addr buf] (<! (bt :channel-receive))]
                   (let [decoded (.decode bencode buf "utf8")]
                     (print infoHash peerId addr "*** <<< sw_gossip message:")
                     (js/console.log "\t" decoded))
                   (recur)))
-    
+
     (go
       (let [sharewode-infohash (<! (torrent/join bt sharewode-swarm-identifier))]
         (print "sharewode-infohash:" sharewode-infohash)
         (loop []
           (<! (timeout (* (js/Math.random) 5000)))
-          (print "sender channels:" (count (get (deref (bt :channels-send)) sharewode-infohash)))
           (if (> (count (get (deref (bt :channels-send)) sharewode-infohash)) 0)
             (let [v (str (js/Math.random))]
               (js/console.log "sending:" v)
@@ -137,18 +136,18 @@
                                            (put! result-chan [403 false]))
                       ; the RPC call to return the current contents of the queue
                       ; if the queue is empty this will block until a value arrives in the queue or the client socket closes
-                      (= call "get-queue") (do (print "get-queue call") (if (web/authenticate params)
-                                                                          (let [pkey (get params "k")
-                                                                                uuid (get params "u")
-                                                                                client (web/ensure-client-chan! client-queues uuid pkey)]
-                                                                            (let [c (web/client-chan-listen! (get params "after") client)
-                                                                                  r (<! c)]
-                                                                              ;(print "about to send:" r)
-                                                                              (if (put! result-chan [200 r])
-                                                                                (print "top level: sent value")
-                                                                                (print "top level: send failed!"))))
-                                                                          (put! result-chan [403 false])))
-                      :else (put! result-chan [404 false])))
-                  (recur)))))
+                      (= call "get-queue") (if (web/authenticate params)
+                                             (let [pkey (get params "k")
+                                                   uuid (get params "u")
+                                                   client (web/ensure-client-chan! client-queues uuid pkey)]
+                                               (let [c (web/client-chan-listen! (get params "after") client)
+                                                     r (<! c)]
+                                                 ;(print "about to send:" r)
+                                                 (if (put! result-chan [200 r])
+                                                   (print "top level: sent value")
+                                                   (print "top level: send failed!"))))
+                                             (put! result-chan [403 false]))
+                      :else (put! result-chan [404 false]))))
+             (recur))))
 
 (set! *main-cli-fn* -main)

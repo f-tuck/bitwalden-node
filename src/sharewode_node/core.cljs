@@ -100,6 +100,7 @@
                       (= call "ping") (put! result-chan [200 "pong"])
                       ; test whether a particular signature verifies with supercop
                       (= call "authenticate") (put! result-chan [200 (web/authenticate params)])
+                      ; TODO: ask for POW height details
                       ; client test rig
                       (= call "client-test") (if (web/authenticate params) ;(and (web/authenticate req) (web/pow-check req))
                                                (let [pkey (get params "k")
@@ -111,6 +112,7 @@
                                                      (put! (client :chan-to-client) (get params "p")))
                                                  (put! result-chan [200 true]))
                                                (put! result-chan [403 false]))
+                      ; Seed a blob in bittorrent
                       (= call "seed") (if (web/authenticate params)
                                         (let [pkey (get params "k")
                                               uuid (get params "u")
@@ -121,6 +123,9 @@
                                                                       (get params "content")))))
                                           (put! result-chan [200 true]))
                                         (put! result-chan [403 false]))
+                      ; TODO: Download a blob from bittorrent
+                      ; TODO: append a new value to a namespace hash
+                      ; TODO: request values from a namespace hash
                       ; DHT put (BEP 0044)
                       (= call "dht-put") (if (web/authenticate params)
                                            (let [pkey (get params "k")

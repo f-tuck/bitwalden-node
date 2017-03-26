@@ -45,7 +45,11 @@
         ; our service components
         bt (torrent/make-client)
         dht (bt :dht)
-        web (web/make configuration)]
+        ; TODO: this arg shouldn't be hardcoded
+        web (web/make configuration "/tmp/webtorrent")
+        
+        ; make sure we have a downloads dir
+        downloads-dir (ensure-downloads-dir)]
 
     (print "Sharewode server started.")
     (print "Bittorrent nodeId:" nodeId)
@@ -53,7 +57,8 @@
     ;(print "Bittorrent DHT port:" (dht :port))
     ;(print "Bittorrent port:" (bittorrent :port))
     (print "WebAPI port:" (web :port))
-
+    (print "Downloads dir:" downloads-dir)
+    
     ; when we exit we want to save the config
     (config/install-exit-handler configuration configfile)
 
@@ -112,6 +117,22 @@
                                                      (put! (client :chan-to-client) (get params "p")))
                                                  (put! result-chan [200 true]))
                                                (put! result-chan [403 false]))
+                      ; Download a blob from bittorrent
+                      (= call "retrieve") (if (web/authenticate params)
+                                            (let [pkey (get params "k")
+                                                  uuid (get params "u")
+                                                  client (web/ensure-client-chan! client-queues uuid pkey)
+                                                  retrieval-chan (torrent/add bt (get params "infohash") downloads-dir)]
+                                              (go
+                                                (loop []
+                                                  (let [download-update (<! retrieval-chan)]
+                                                    (when download-update
+                                                      (put! (client :chan-to-client)
+                                                            download-update)
+                                                      (if (not= (get download-update "download") "done")
+                                                        (recur))))))
+                                              (put! result-chan [200 true]))
+                                            (put! result-chan [403 false]))
                       ; Seed a blob in bittorrent
                       (= call "seed") (if (web/authenticate params)
                                         (let [pkey (get params "k")
@@ -123,7 +144,6 @@
                                                                       (get params "content")))))
                                           (put! result-chan [200 true]))
                                         (put! result-chan [403 false]))
-                      ; TODO: Download a blob from bittorrent
                       ; TODO: append a new value to a namespace hash
                       ; TODO: request values from a namespace hash
                       ; DHT put (BEP 0044)

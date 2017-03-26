@@ -4,6 +4,9 @@
   (:require-macros [cljs.core.async.macros :refer [go]]))
 
 (defonce crypto (nodejs/require "crypto"))
+(defonce os (nodejs/require "os"))
+(defonce mkdirp (nodejs/require "mkdirp"))
+(defonce process (nodejs/require "process"))
 
 (defn <<< [f & args]
   (let [c (chan)] ()
@@ -33,3 +36,14 @@
 
 (defn timestamp-now []
   (.getTime (js/Date.)))
+
+(defn ensure-downloads-dir []
+  (let [d (str (.homedir os) "/.bitwalden/downloads")]
+    (mkdirp d
+            (fn [error]
+              (when error
+                (print "Error creating" d)
+                (print error)
+                (.exit process 1))))
+    d))
+

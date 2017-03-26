@@ -1,7 +1,7 @@
 (ns sharewode-node.torrent
   (:require [cljs.nodejs :as nodejs]
-            [cljs.core.async :refer [chan put! <! close!]]
-            [sharewode-node.utils :refer [buf-hex]])
+            [cljs.core.async :refer [chan put! <! close! timeout]]
+            [sharewode-node.utils :refer [buf-hex <<<]])
   (:require-macros [cljs.core.async.macros :refer [go go-loop]]))
 
 (nodejs/enable-util-print!)
@@ -77,6 +77,30 @@
 ; join a name-only party
 (defn join [bt identifier]
   (seed bt identifier identifier))
+
+; get a download link to some torrent
+(defn add [bt infoHash downloads-dir]
+  (let [c (chan)
+        path (str downloads-dir "/" infoHash)]
+    (go
+      (print "Adding" infoHash downloads-dir)
+      (.add (bt :client) infoHash (clj->js {"path" (str downloads-dir "/" infoHash)})
+            (fn [torrent]
+              (print "Got torrent" (.-infoHash torrent))
+              (put! c {"download" "starting"})
+              (go
+                ; TODO: timeout if it appears to be hanging
+                (loop []
+                  ;(print "Checking download progress")
+                  (when (put! c {"download" "progress" "value" (.-progress torrent)})
+                    (<! (timeout 1000))
+                    (if (< (.-progress torrent) 1.0)
+                      (recur)
+                      (do
+                        ;(put! c {"download" "progress" "value" 1})
+                        (put! c {"download" "done" "files" (map (fn [f] (into {} (map (fn [field] [field (aget f field)]) ["name" "path" "length"]))) (.-files torrent))})
+                        (close! c)))))))))
+    c))
 
 (defn send-to-swarm [bt infoHash message]
   (doseq [[peerId c] (get (deref (bt :channels-send)) infoHash)]

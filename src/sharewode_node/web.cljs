@@ -23,7 +23,7 @@
 (defn write-header [res code & [headers]]
   (.writeHead res code (clj->js (merge {"Content-Type" "application/json"} headers))))
 
-(defn make [configuration]
+(defn make [configuration content-dir]
   (let [app (express)
         requests-chan (chan)]
     
@@ -37,7 +37,9 @@
     ; parse incoming data
     (.use app (cookie))
     (.use app (.json body-parser))
-    
+
+    (.use app "/sw/content" (.static express content-dir))
+
     ; handle requests
     (let [root-chan (<<< #(.get app "/" %))
           request-chan (<<< #(.all app path %))]

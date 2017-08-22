@@ -4,6 +4,7 @@
             [sharewode-node.dht :as dht :refer [put-value get-value]]
             [sharewode-node.torrent :as torrent]
             [sharewode-node.web :as web]
+            [sharewode-node.pool :as pool]
             [cljs.nodejs :as nodejs]
             [cljs.core.async :refer [<! put! timeout alts! close!]])
   (:require-macros [cljs.core.async.macros :refer [go go-loop]]))
@@ -41,15 +42,20 @@
         listeners (atom {}) ; infoHash -> [chans...]
         client-queues (atom {}) ; clientKey -> [{:timestamp ... :message ...} ...]
         test-clients (atom {})
-
+        public-peers (atom {})
+        
         ; our service components
         bt (torrent/make-client)
         dht (bt :dht)
         ; TODO: this arg shouldn't be hardcoded
-        web (web/make configuration "/tmp/webtorrent")
+        web (web/make configuration "/tmp/webtorrent" public-peers)
+        
+        public-url (if (not (@configuration :private)) (or (@configuration :URL) (str ":" (web :port))))
         
         ; make sure we have a downloads dir
-        downloads-dir (ensure-downloads-dir)]
+        downloads-dir (ensure-downloads-dir)
+        
+        node-pool (pool/connect (bt :client) sharewode-swarm-identifier public-url public-peers)]
 
     (print "Sharewode server started.")
     (print "Bittorrent nodeId:" nodeId)

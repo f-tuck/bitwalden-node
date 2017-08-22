@@ -23,7 +23,7 @@
 (defn write-header [res code & [headers]]
   (.writeHead res code (clj->js (merge {"Content-Type" "application/json"} headers))))
 
-(defn make [configuration content-dir]
+(defn make [configuration content-dir public-peers]
   (let [app (express)
         requests-chan (chan)]
     
@@ -36,21 +36,34 @@
     
     ; parse incoming data
     (.use app (cookie))
-    (.use app (.json body-parser))
+    ;(.use app (.json body-parser))
 
     (.use app "/sw/content" (.static express content-dir))
 
     ; handle requests
     (let [root-chan (<<< #(.get app "/" %))
-          request-chan (<<< #(.all app path %))]
-
-      ; TODO: static-serve the HTML5 sharewode client software, if available
+          info-chan (<<< #(.get app "/sw/info" %))
+          peers-chan (<<< #(.get app "/sw/peers" %))
+          request-chan (<<< #(.all app path (.json body-parser) %))]
+      
       (go-loop []
                (let [[req res cb] (<! root-chan)]
                  (write-header res 200)
-                 (.end res "Sharewode node.")
+                 (.end res (to-json true))
                  (recur)))
-
+      
+      (go-loop []
+               (let [[req res cb] (<! peers-chan)]
+                 (write-header res 200)
+                 (.end res (to-json @public-peers))
+                 (recur)))
+      
+      (go-loop []
+               (let [[req res cb] (<! info-chan)]
+                 (write-header res 200)
+                 (.end res (to-json {:bitwalden true}))
+                 (recur)))
+      
       (go-loop []
                (let [[req res cb] (<! request-chan)
                      result-chan (chan)

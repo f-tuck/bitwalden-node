@@ -29,8 +29,6 @@
 
 ;*** entry point ***;
 
-(print "VER" (.toString (js/Buffer. client-string) "hex"))
-
 (defn -main []
   (let [configfile (config/default-config-filename)
         configuration (atom (config/load-to-clj configfile))
@@ -40,10 +38,10 @@
         client-queues (atom {}) ; clientKey -> [{:timestamp ... :message ...} ...]
         public-peers (atom {})
         ; service components
-        bt (torrent/make-client #js {:peerId peerId})
+        bt (torrent/make-client #js {:peerId peerId :path downloads-dir})
         dht (bt :dht)
         ; TODO: this arg shouldn't be hardcoded - wt not setting it correctly
-        web (web/make configuration "/tmp/webtorrent" public-peers)
+        web (web/make configuration downloads-dir public-peers)
         public-url (if (not (@configuration :private)) (or (@configuration :URL) (str ":" (web :port))))
         node-pool (pool/connect (bt :client) sharewode-swarm-identifier public-url public-peers)]
     
@@ -106,7 +104,8 @@
                                           (go (put! (client :chan-to-client)
                                                     (<! (torrent/seed bt
                                                                       (get params "name")
-                                                                      (get params "content")))))
+                                                                      (get params "content")
+                                                                      downloads-dir))))
                                           (put! result-chan [200 true]))
                                         (put! result-chan [403 false]))
                       ; DHT put (BEP 0044)

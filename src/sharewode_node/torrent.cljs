@@ -10,6 +10,8 @@
 (defonce debug ((nodejs/require "debug") "sharewode-node.bittorrent"))
 (defonce wt (nodejs/require "webtorrent"))
 (defonce bencode (nodejs/require "bencode"))
+(defonce create-torrent (nodejs/require "create-torrent"))
+(defonce parse-torrent (nodejs/require "parse-torrent"))
 
 (defn make-client [opts]
   (let [client (wt. opts)]
@@ -58,25 +60,30 @@
     protocol-extension))
 
 ; seed some content as well as listening out for gossip messages
-(defn seed [bt content-name contents]
+(defn seed [bt content-name contents downloads-dir]
   (let [c (chan)]
     (go
-      (let [content (js/Buffer. contents)
-            _ (set! (.-name content) content-name)
-            torrent (.seed (bt :client) content ;#js {:name content-name :createdBy "sharewode"}
-                           (fn [torrent]
-                             (js/console.log "seeding:" (.-infoHash torrent))
-                             (put! c (.-infoHash torrent))
-                             (close! c)))]
-        (.on torrent "wire"
-             (fn [wire addr]
-               (print (str "New wire" addr (.-peerId wire)))
-               (.use wire (make-protocol bt (.-infoHash torrent) wire addr))))))
+      (let [content (js/Buffer. contents)]
+        (set! (.-name content) content-name)
+        ; have to do the create-torrent parse-torrent dance to get the infoHash
+        ; so that we have the correct download folder
+        (create-torrent
+          content
+          (fn [err torrent-blob]
+            (let [pre-torrent (parse-torrent torrent-blob)
+                  torrent (.seed (bt :client) content #js {:path (str downloads-dir "/" (.-infoHash pre-torrent))} ;#js {:name content-name :createdBy "sharewode"}
+                                 (fn [torrent]
+                                   (put! c (.-infoHash torrent))
+                                   (close! c)))]
+              (.on torrent "wire"
+                   (fn [wire addr]
+                     (js/console.log "New wire" addr (.-peerId wire))
+                     (.use wire (make-protocol bt (.-infoHash torrent) wire addr)))))))))
     c))
 
 ; join a name-only party
 (defn join [bt identifier]
-  (seed bt identifier "\0"))
+  (seed bt identifier "\0" nil))
 
 ; get a download link to some torrent
 (defn add [bt infoHash downloads-dir]
@@ -84,22 +91,22 @@
         path (str downloads-dir "/" infoHash)]
     (go
       (print "Adding" infoHash downloads-dir)
-      (.add (bt :client) infoHash (clj->js {"path" (str downloads-dir "/" infoHash)})
-            (fn [torrent]
-              (print "Got torrent" (.-infoHash torrent))
-              (put! c {"download" "starting"})
-              (go
-                ; TODO: timeout if it appears to be hanging
-                (loop []
-                  ;(print "Checking download progress")
-                  (when (put! c {"download" "progress" "value" (.-progress torrent)})
-                    (<! (timeout 1000))
-                    (if (< (.-progress torrent) 1.0)
-                      (recur)
-                      (do
-                        ;(put! c {"download" "progress" "value" 1})
-                        (put! c {"download" "done" "files" (map (fn [f] (into {} (map (fn [field] [field (aget f field)]) ["name" "path" "length"]))) (.-files torrent))})
-                        (close! c)))))))))
+      (let [opts #js {:path path}]
+        (.add (bt :client) infoHash opts
+              (fn [torrent]
+                (put! c {"download" "starting"})
+                (go
+                  ; TODO: timeout if it appears to be hanging
+                  (loop []
+                    ;(print "Checking download progress")
+                    (when (put! c {"download" "progress" "value" (.-progress torrent)})
+                      (<! (timeout 1000))
+                      (if (< (.-progress torrent) 1.0)
+                        (recur)
+                        (do
+                          ;(put! c {"download" "progress" "value" 1})
+                          (put! c {"download" "done" "files" (map (fn [f] (into {} (map (fn [field] [field (aget f field)]) ["name" "path" "length"]))) (.-files torrent))})
+                          (close! c))))))))))
     c))
 
 (defn send-to-swarm [bt infoHash message]

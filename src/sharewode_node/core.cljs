@@ -5,7 +5,7 @@
             [sharewode-node.torrent :as torrent]
             [sharewode-node.web :as web]
             [sharewode-node.pool :as pool]
-            [sharewode-node.pow :as pow]
+            [sharewode-node.const :as const]
             [cljs.nodejs :as nodejs]
             [cljs.core.async :refer [<! put! timeout alts! close!]])
   (:require-macros [cljs.core.async.macros :refer [go go-loop]]))
@@ -16,15 +16,6 @@
 (defonce crypto (nodejs/require "crypto"))
 (defonce bencode (nodejs/require "bencode"))
 
-(def client-string "-SW0001-")
-(def sharewode-swarm-identifier "sharewode:v-alpha-2:public-node")
-(def infoHash-sharewode-dht-address (sha1 sharewode-swarm-identifier))
-(def default-profile-name "sharewode.profile")
-
-(def ideal-peer-count 8)
-(def re-announce-frequency-hours 1)
-(def peer-gather-timeout 300000)
-
 (nodejs/enable-util-print!)
 
 ;*** entry point ***;
@@ -33,17 +24,19 @@
   (let [configfile (config/default-config-filename)
         configuration (atom (config/load-to-clj configfile))
         downloads-dir (ensure-downloads-dir)
-        peerId (str (.toString (js/Buffer. client-string) "hex") (.toString (js/Buffer. (.randomBytes crypto 12)) "hex"))
+        peerId (str (.toString (js/Buffer. const/client-string) "hex") (.toString (js/Buffer. (.randomBytes crypto 12)) "hex"))
         ; data structures
-        client-queues (atom {}) ; clientKey -> [{:timestamp ... :message ...} ...]
-        public-peers (atom {})
+        client-queues (atom {}) ; [clientKey uuid] -> [{:timestamp ... :message ...} ...]
+        client-listeners (atom []) ; [clientKey uuid] -> chan
+        subscriptions (atom {}) ; infoHash -> {clientKey: {uuid: {type: refresh/collect/respond contract: ... }}}
+        public-peers (atom {}) ; list of URLs of known friends
         ; service components
         bt (torrent/make-client #js {:peerId peerId :path downloads-dir})
         dht (bt :dht)
         ; TODO: this arg shouldn't be hardcoded - wt not setting it correctly
         web (web/make configuration downloads-dir public-peers)
         public-url (if (not (@configuration :private)) (or (@configuration :URL) (str ":" (web :port))))
-        node-pool (pool/connect (bt :client) sharewode-swarm-identifier public-url public-peers)]
+        node-pool (pool/connect (bt :client) const/public-pool-name public-url public-peers)]
     
     (print "Sharewode server started.")
     (print "Bittorrent nodeId:" (.. (bt :client) -nodeId))
@@ -140,7 +133,7 @@
                                                    client (web/ensure-client-chan! client-queues uuid pkey)]
                                                (let [c (web/client-chan-listen! (get params "after") client)
                                                      r (<! c)]
-                                                 (print "about to send:" r)
+                                                 ;(print "about to send:" r)
                                                  (if (put! result-chan [200 r])
                                                    (print "top level: sent value")
                                                    (print "top level: send failed!"))))

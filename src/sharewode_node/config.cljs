@@ -16,11 +16,11 @@
     (fs.writeFileSync
       filename
       (js/JSON.stringify
-        (clj->js @configuration))
+        (clj->js @configuration) nil 2)
       "utf8")))
 
-(defn load [filename]
-  (atom (try (js->clj (js/JSON.parse (fs.readFileSync filename))) (catch js/Error e {}))))
+(defn load-to-clj [filename]
+  (try (js->clj (js/JSON.parse (fs.readFileSync filename))) (catch js/Error e {})))
 
 (defn install-exit-handler [configuration filename]
   (let [exit-fn (make-exit-fn configuration filename)]

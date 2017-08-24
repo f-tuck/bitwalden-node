@@ -30,7 +30,7 @@
 
 (defn -main []
   (let [configfile (config/default-config-filename)
-        configuration (config/load configfile)
+        configuration (atom (config/load-to-clj configfile))
         nodeId (config/get-or-set! configuration "nodeId" (.toString (.randomBytes crypto 20) "hex"))
         peerId (config/get-or-set! configuration "peerId" (.toString (js/Buffer. (+ client-string (.randomBytes crypto 6))) "hex"))
         torrentPort (config/get-or-set! configuration "torrentPort" 6881)

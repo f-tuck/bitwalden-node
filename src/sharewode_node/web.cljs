@@ -36,7 +36,6 @@
     
     ; parse incoming data
     (.use app (cookie))
-    ;(.use app (.json body-parser))
 
     (.use app "/sw/content" (.static express content-dir))
 

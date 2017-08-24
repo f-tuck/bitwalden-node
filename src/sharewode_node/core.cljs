@@ -32,9 +32,7 @@
   (let [configfile (config/default-config-filename)
         configuration (atom (config/load-to-clj configfile))
         nodeId (config/get-or-set! configuration "nodeId" (.toString (.randomBytes crypto 20) "hex"))
-        peerId (config/get-or-set! configuration "peerId" (.toString (js/Buffer. (+ client-string (.randomBytes crypto 6))) "hex"))
-        torrentPort (config/get-or-set! configuration "torrentPort" 6881)
-
+        peerId (str (.toString (js/Buffer. client-string) "hex") (.toString (js/Buffer. (.randomBytes crypto 12)) "hex"))
         ; data structures
         ;swarms (atom {}) ; infoHash -> :last-announce timestamp :peer-candidate-ids [] :peer-ids [] :client-pubkeys []
         peer-candidates (atom {}) ; [infoHash host port] -> :timestamp t
@@ -45,7 +43,7 @@
         public-peers (atom {})
         
         ; our service components
-        bt (torrent/make-client)
+        bt (torrent/make-client #js {:peerId peerId})
         dht (bt :dht)
         ; TODO: this arg shouldn't be hardcoded
         web (web/make configuration "/tmp/webtorrent" public-peers)

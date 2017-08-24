@@ -11,8 +11,8 @@
 (defonce wt (nodejs/require "webtorrent"))
 (defonce bencode (nodejs/require "bencode"))
 
-(defn make-client []
-  (let [client (wt.)]
+(defn make-client [opts]
+  (let [client (wt. opts)]
     (.on client "ready" (fn [] (js/console.log "torrent client ready")))
     (.on client "torrent" (fn [torrent] (js/console.log "torrent client added:" (.-infoHash torrent))))
     {:client client

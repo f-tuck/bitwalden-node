@@ -23,7 +23,5 @@
                     :seq seq-id
                     :v (js/Buffer. value)
                     :sign (fn [buf] (js/Buffer. signature-b64 "base64"))}]
-    (<<< #(.put dht
-                (clj->js put-params)
-                %))))
+    (<<< #(.put dht (clj->js put-params) %))))
 

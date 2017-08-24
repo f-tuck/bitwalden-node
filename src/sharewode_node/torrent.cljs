@@ -76,7 +76,7 @@
 
 ; join a name-only party
 (defn join [bt identifier]
-  (seed bt identifier identifier))
+  (seed bt identifier "\0"))
 
 ; get a download link to some torrent
 (defn add [bt infoHash downloads-dir]

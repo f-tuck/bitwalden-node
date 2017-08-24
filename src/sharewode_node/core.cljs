@@ -1,10 +1,11 @@
 (ns sharewode-node.core
-  (:require [sharewode-node.utils :refer [<<< sha1 to-json buf-hex timestamp-now]]
+  (:require [sharewode-node.utils :refer [<<< sha1 to-json buf-hex timestamp-now ensure-downloads-dir]]
             [sharewode-node.config :as config]
             [sharewode-node.dht :as dht :refer [put-value get-value]]
             [sharewode-node.torrent :as torrent]
             [sharewode-node.web :as web]
             [sharewode-node.pool :as pool]
+            [sharewode-node.pow :as pow]
             [cljs.nodejs :as nodejs]
             [cljs.core.async :refer [<! put! timeout alts! close!]])
   (:require-macros [cljs.core.async.macros :refer [go go-loop]]))
@@ -28,78 +29,33 @@
 
 ;*** entry point ***;
 
+(print "VER" (.toString (js/Buffer. client-string) "hex"))
+
 (defn -main []
   (let [configfile (config/default-config-filename)
         configuration (atom (config/load-to-clj configfile))
-        nodeId (config/get-or-set! configuration "nodeId" (.toString (.randomBytes crypto 20) "hex"))
+        downloads-dir (ensure-downloads-dir)
         peerId (str (.toString (js/Buffer. client-string) "hex") (.toString (js/Buffer. (.randomBytes crypto 12)) "hex"))
         ; data structures
-        ;swarms (atom {}) ; infoHash -> :last-announce timestamp :peer-candidate-ids [] :peer-ids [] :client-pubkeys []
-        peer-candidates (atom {}) ; [infoHash host port] -> :timestamp t
-        peers (atom {}) ; [infoHash peerId] -> :infoHash i :peerId p :host h :port p :from-peer chan :to-peer chan
-        listeners (atom {}) ; infoHash -> [chans...]
         client-queues (atom {}) ; clientKey -> [{:timestamp ... :message ...} ...]
-        test-clients (atom {})
         public-peers (atom {})
-        
-        ; our service components
+        ; service components
         bt (torrent/make-client #js {:peerId peerId})
         dht (bt :dht)
-        ; TODO: this arg shouldn't be hardcoded
+        ; TODO: this arg shouldn't be hardcoded - wt not setting it correctly
         web (web/make configuration "/tmp/webtorrent" public-peers)
-        
         public-url (if (not (@configuration :private)) (or (@configuration :URL) (str ":" (web :port))))
-        
-        ; make sure we have a downloads dir
-        downloads-dir (ensure-downloads-dir)
-        
         node-pool (pool/connect (bt :client) sharewode-swarm-identifier public-url public-peers)]
-
+    
     (print "Sharewode server started.")
-    (print "Bittorrent nodeId:" nodeId)
-    (print "Bittorrent peerId:" peerId)
-    ;(print "Bittorrent DHT port:" (dht :port))
-    ;(print "Bittorrent port:" (bittorrent :port))
+    (print "Bittorrent nodeId:" (.. (bt :client) -nodeId))
+    (print "Bittorrent peerId:" (.. (bt :client) -peerId))
     (print "WebAPI port:" (web :port))
     (print "Downloads dir:" downloads-dir)
     
     ; when we exit we want to save the config
     (config/install-exit-handler configuration configfile)
-
-    ; use-cases:
-    ; * keeping a list of sharewode peers to share publically
-    ; * gossip-sending some message to a given swarm
-    ; * receiving messages from some given swarm by gossipi
-
-    ; * setting the profile of some pubkey + salt + sig
-    ; * getting the profile of some pubkey + salt
-    ; * getting the content of some infoHash
-    ; * seeding the content of some infoHash
-
-    ; swarm/make -> returns swarm-atom
-    ; swarm/send-to swarm-atom infoHash message -> returns a chan, receives number of peers updated and closes
-    ; swarm/receive-from swarm-atom infoHash -> returns a chan, recieves messages from the swarm - close chan to stop listening
-    ; swarm/get-peer-list swarm-atom infoHash
-
-    ; handle any messages that come in from bittorrent swarms
-
-    (go-loop [] (let [[infoHash peerId addr buf] (<! (bt :channel-receive))]
-                  (let [decoded (.decode bencode buf "utf8")]
-                    (print infoHash peerId addr "*** <<< sw_gossip message:")
-                    (js/console.log "\t" decoded))
-                  (recur)))
-
-    (go
-      (let [sharewode-infohash (<! (torrent/join bt sharewode-swarm-identifier))]
-        (print "sharewode-infohash:" sharewode-infohash)
-        (loop []
-          (<! (timeout (* (js/Math.random) 5000)))
-          (if (> (count (get (deref (bt :channels-send)) sharewode-infohash)) 0)
-            (let [v (str (js/Math.random))]
-              (js/console.log "sending:" v)
-              (torrent/send-to-swarm bt sharewode-infohash v)))
-          (recur))))
-
+    
     ; handle json-rpc web requests
     (go-loop [] (let [[call params req res result-chan res] (<! (web :requests-chan))]
                   (print "web client recv:" call)
@@ -110,6 +66,11 @@
                       ; test whether a particular signature verifies with supercop
                       (= call "authenticate") (put! result-chan [200 (web/authenticate params)])
                       ; TODO: ask for POW height details
+                      ; TODO: request POW HMAC token
+                      ; TODO: request node list
+                      ; TODO: send message to a particular hash
+                      ; TODO: collect on a particular hash
+                      ; TODO: set responder on a particular hash
                       ; client test rig
                       (= call "client-test") (if (web/authenticate params) ;(and (web/authenticate req) (web/pow-check req))
                                                (let [pkey (get params "k")
@@ -148,13 +109,12 @@
                                                                       (get params "content")))))
                                           (put! result-chan [200 true]))
                                         (put! result-chan [403 false]))
-                      ; TODO: append a new value to a namespace hash
-                      ; TODO: request values from a namespace hash
                       ; DHT put (BEP 0044)
                       (= call "dht-put") (if (web/authenticate params)
                                            (let [pkey (get params "k")
                                                  uuid (get params "u")
                                                  client (web/ensure-client-chan! client-queues uuid pkey)]
+                                             ; TODO: contract to repeatedly update this 
                                              (go (put! (client :chan-to-client)
                                                        (<! (put-value dht
                                                                       (get params "v")
@@ -181,7 +141,7 @@
                                                    client (web/ensure-client-chan! client-queues uuid pkey)]
                                                (let [c (web/client-chan-listen! (get params "after") client)
                                                      r (<! c)]
-                                                 ;(print "about to send:" r)
+                                                 (print "about to send:" r)
                                                  (if (put! result-chan [200 r])
                                                    (print "top level: sent value")
                                                    (print "top level: send failed!"))))

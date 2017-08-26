@@ -18,6 +18,14 @@
 
 (nodejs/enable-util-print!)
 
+(defn api []
+  {:hello
+   (fn [args]
+     (concat ["hello"] args))
+   :beep
+   (fn [args]
+     (concat ["beep"] args))})
+
 ;*** entry point ***;
 
 (defn -main []
@@ -27,14 +35,14 @@
         peerId (str (.toString (js/Buffer. const/client-string) "hex") (.toString (js/Buffer. (.randomBytes crypto 12)) "hex"))
         ; data structures
         client-queues (atom {}) ; [clientKey uuid] -> [{:timestamp ... :message ...} ...]
+        contracts (atom {}) ; infoHash -> {clientKey: {uuid: {type: refresh/collect/respond contract: ... }}}
         client-listeners (atom []) ; [clientKey uuid] -> chan
-        subscriptions (atom {}) ; infoHash -> {clientKey: {uuid: {type: refresh/collect/respond contract: ... }}}
         public-peers (atom {}) ; list of URLs of known friends
         ; service components
         bt (torrent/make-client #js {:peerId peerId :path downloads-dir})
         dht (bt :dht)
         ; TODO: this arg shouldn't be hardcoded - wt not setting it correctly
-        web (web/make configuration downloads-dir public-peers)
+        web (web/make configuration (api) downloads-dir public-peers)
         public-url (if (not (@configuration :private)) (or (@configuration :URL) (str ":" (web :port))))
         node-pool (pool/connect (bt :client) const/public-pool-name public-url public-peers)]
     
@@ -47,6 +55,13 @@
     ; when we exit we want to save the config
     (config/install-exit-handler configuration configfile)
     
+    ; thread that runs every second and flushes old messages and clients
+    (go-loop []
+             (<! (timeout 1000))
+             ;(debug "Flushing client queues.")
+             ; TODO: this.
+             (recur))
+    
     ; handle json-rpc web requests
     (go-loop [] (let [[call params req res result-chan res] (<! (web :requests-chan))]
                   (print "web client recv:" call)
@@ -58,7 +73,6 @@
                       (= call "authenticate") (put! result-chan [200 (web/authenticate params)])
                       ; TODO: ask for POW height details
                       ; TODO: request POW HMAC token
-                      ; TODO: request node list
                       ; TODO: send message to a particular hash
                       ; TODO: collect on a particular hash
                       ; TODO: set responder on a particular hash

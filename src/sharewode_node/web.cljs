@@ -16,6 +16,7 @@
 (defonce ed (nodejs/require "ed25519-supercop"))
 (defonce bs58 (nodejs/require "bs58"))
 (defonce bencode (nodejs/require "bencode"))
+(defonce jayson (nodejs/require "jayson"))
 
 (defonce port 8923)
 (defonce path "/sw")
@@ -23,7 +24,17 @@
 (defn write-header [res code & [headers]]
   (.writeHead res code (clj->js (merge {"Content-Type" "application/json"} headers))))
 
-(defn make [configuration content-dir public-peers]
+(defn jsonrpc-router [api method params]
+  (let [api-call (api (keyword method))]
+    (if api-call
+      (fn [args callback]
+        (callback nil
+                  (clj->js (api-call args)))))))
+
+(defn make-json-rpc-server [api]
+  (.middleware (.server jayson #js {} #js {:router (partial jsonrpc-router api)})))
+
+(defn make [configuration api content-dir public-peers]
   (let [app (express)
         requests-chan (chan)]
     
@@ -37,8 +48,12 @@
     ; parse incoming data
     (.use app (cookie))
 
+    (.use app (.urlencoded body-parser #js {:extended true :limit "1mb"}))
+
     (.use app "/sw/content" (.static express content-dir))
 
+    (.post app "/sw/rpc" (.json body-parser #js {:limit "1mb"}) (make-json-rpc-server api))
+    
     ; handle requests
     (let [root-chan (<<< #(.get app "/" %))
           info-chan (<<< #(.get app "/sw/info" %))

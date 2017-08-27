@@ -19,12 +19,12 @@
 (nodejs/enable-util-print!)
 
 (defn api []
-  {:hello
-   (fn [args]
-     (concat ["hello"] args))
-   :beep
-   (fn [args]
-     (concat ["beep"] args))})
+  {:ping
+   (fn [params]
+     (merge {:pong true} params))
+   :authenticate
+   (fn [params]
+     (web/authenticate params))})
 
 ;*** entry point ***;
 

@@ -1,32 +1,26 @@
 CLJS=$(wildcard src/**/**.cljs)
-NPM=./build/node/bin/npm
-NODE=./build/node/bin/node
+NPM=./deps/node/bin/npm
+NODE=./deps/node/bin/node
 NODE_VERSION=7.2.0
 NODEENV_VERSION=0.13.6
 
-default: deps build
-
-deps: build/node/bin/node node_modules
-
-build: build/sharewode-server-node.js
+build/sharewode-server-node.js: $(CLJS) $(NODE) node_modules node_modules/webtorrent/webtorrent.min.js
+	lein cljsbuild once prod
 
 .PHONY: clean
 
-build/nodeenv-src/nodeenv.py:
-	git clone --branch $(NODEENV_VERSION) https://github.com/ekalinin/nodeenv.git build/nodeenv-src
+deps/nodeenv-src/nodeenv.py:
+	git clone --branch $(NODEENV_VERSION) https://github.com/ekalinin/nodeenv.git deps/nodeenv-src
 
-$(NODE) $(NPM): build/nodeenv-src/nodeenv.py
-	python ./build/nodeenv-src/nodeenv.py --node=$(NODE_VERSION) --prebuilt build/node
-	find build/node -exec touch {} \;
+$(NODE) $(NPM): deps/nodeenv-src/nodeenv.py
+	python ./deps/nodeenv-src/nodeenv.py --node=$(NODE_VERSION) --prebuilt deps/node
+	find deps/node -exec touch {} \;
 
-node_modules: build/node/bin/npm package.json
-	. ./build/node/bin/activate && npm install
+node_modules: deps/node/bin/npm package.json
+	. ./deps/node/bin/activate && npm install
 
 node_modules/webtorrent/webtorrent.min.js: node_modules
 
-build/sharewode-server-node.js: $(CLJS) node_modules/webtorrent/webtorrent.min.js
-	lein cljsbuild once prod
-
 clean:
 	lein clean
-	rm -rf node_modules
+	rm -rf node_modules deps build

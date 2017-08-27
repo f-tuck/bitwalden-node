@@ -14,8 +14,7 @@
   :source-paths ["src"]
   :test-paths ["test"]
 
-  :clean-targets ["server.js"
-                  "target"
+  :clean-targets ["target"
                   "build"]
 
   :cljsbuild {:builds

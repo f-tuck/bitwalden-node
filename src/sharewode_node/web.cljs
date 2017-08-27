@@ -1,5 +1,6 @@
 (ns sharewode-node.web
   (:require [sharewode-node.utils :refer [<<< to-json buf-hex timestamp-now pr-thru]]
+            [sharewode-node.constants :as const]
             [cljs.nodejs :as nodejs]
             [cljs.core.async :refer [<! put! timeout chan sliding-buffer close! mult tap untap]])
   (:require-macros [cljs.core.async.macros :refer [go go-loop]]))
@@ -17,9 +18,6 @@
 (defonce bs58 (nodejs/require "bs58"))
 (defonce bencode (nodejs/require "bencode"))
 (defonce jayson (nodejs/require "jayson"))
-
-(defonce port 8923)
-(defonce path "/sw")
 
 (defn write-header [res code & [headers]]
   (.writeHead res code (clj->js (merge {"Content-Type" "application/json"} headers))))
@@ -51,7 +49,7 @@
     (let [root-chan (<<< #(.get app "/" %))
           info-chan (<<< #(.get app "/sw/info" %))
           peers-chan (<<< #(.get app "/sw/peers" %))
-          request-chan (<<< #(.all app path (.json body-parser) %))]
+          request-chan (<<< #(.all app "/sw" (.json body-parser) %))]
       
       (go-loop []
                (let [[req res cb] (<! root-chan)]
@@ -90,9 +88,9 @@
                  (recur))))
     
     ; serve
-    (.listen app port)
+    (.listen app const/web-api-port)
     
-    {:server app :port port :requests-chan requests-chan}))
+    {:server app :port const/web-api-port :requests-chan requests-chan}))
 
 (defn get-or-create-client! [existing-client]
   (print "existing-client?" (if existing-client "yes" "no"))

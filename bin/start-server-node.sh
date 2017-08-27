@@ -13,7 +13,7 @@ do
   esac
 done
 
-. ./build/node/bin/activate
+. ./deps/node/bin/activate
 
 if [ "$DEVMODE" = "1" ]
 then

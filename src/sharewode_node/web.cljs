@@ -52,7 +52,7 @@
 
     (.use app "/sw/content" (.static express content-dir))
 
-    (.post app "/sw/rpc" (.json body-parser #js {:limit "1mb"}) (make-json-rpc-server api))
+    (.post app "/sw/rpc" (.json body-parser #js {:limit "1mb" :type "*/*" }) (make-json-rpc-server api))
     
     ; handle requests
     (let [root-chan (<<< #(.get app "/" %))

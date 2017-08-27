@@ -27,9 +27,9 @@
 (defn jsonrpc-router [api method params]
   (let [api-call (api (keyword method))]
     (if api-call
-      (fn [args callback]
+      (fn [params callback]
         (callback nil
-                  (clj->js (api-call args)))))))
+                  (clj->js (api-call (js->clj params))))))))
 
 (defn make-json-rpc-server [api]
   (.middleware (.server jayson #js {} #js {:router (partial jsonrpc-router api)})))

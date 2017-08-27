@@ -38,13 +38,6 @@
   (let [app (express)
         requests-chan (chan)]
     
-    ; thread that runs every second and flushes old messages and clients
-    (go-loop []
-             (<! (timeout 1000))
-             ;(debug "Flushing client queues.")
-             ; TODO: this.
-             (recur))
-    
     ; parse incoming data
     (.use app (cookie))
 

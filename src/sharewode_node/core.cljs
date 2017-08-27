@@ -5,7 +5,7 @@
             [sharewode-node.torrent :as torrent]
             [sharewode-node.web :as web]
             [sharewode-node.pool :as pool]
-            [sharewode-node.const :as const]
+            [sharewode-node.constants :as const]
             [cljs.nodejs :as nodejs]
             [cljs.core.async :refer [<! put! timeout alts! close!]])
   (:require-macros [cljs.core.async.macros :refer [go go-loop]]))

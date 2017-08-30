@@ -7,7 +7,7 @@
             [sharewode-node.pool :as pool]
             [sharewode-node.constants :as const]
             [cljs.nodejs :as nodejs]
-            [cljs.core.async :refer [<! put! timeout alts! close!]])
+            [cljs.core.async :refer [<! put! chan timeout alts! close!]])
   (:require-macros [cljs.core.async.macros :refer [go go-loop]]))
 
 ; nodejs requirements
@@ -18,13 +18,49 @@
 
 (nodejs/enable-util-print!)
 
-(defn api []
+(defonce api-atom (atom {}))
+
+(def api
   {:ping
    (fn [params]
      (merge {:pong true} params))
+
    :authenticate
    (fn [params]
-     (web/authenticate params))})
+     (web/authenticate params))
+
+   :client-test
+   (fn [params clients]
+     ; wait 3 seconds and pass a value via client queue
+     (go (<! (timeout 3000))
+         (let [[k uid] (web/ids params)]
+           (swap! clients web/send-to-client k uid (get params "p"))))
+     ; immediately ACK
+     true)
+
+   :get-queue
+   (fn [params clients]
+     (go (let [[k uid] (web/ids params)
+               c (chan)
+               channel-timeout (or (get params "timeout") const/channel-timeout-max)]
+           (swap! clients web/add-queue-listener k uid c (get params "after"))
+           ; timeout and close the chan after 5 minutes max to clean up
+           (go (<! (timeout (js/Math.min channel-timeout const/channel-timeout-max)))
+               (close! c))
+           (let [response (<! c)]
+             ; return valid empty queue if there was no response
+             (or response [])))))})
+
+; hack for reloadable code
+(reset! api-atom api)
+
+(def clients-struct
+  {:queues {} ; clientKey -> uuid = timestamped-messages
+   :contracts {} ; infoHash -> clientKey -> uuid = contract-details
+   :listeners {}}) ; clientKey -> uuid = chan
+
+(defonce clients
+  (atom clients-struct))
 
 ;*** entry point ***;
 
@@ -34,15 +70,15 @@
         downloads-dir (ensure-downloads-dir)
         peerId (str (.toString (js/Buffer. const/client-string) "hex") (.toString (js/Buffer. (.randomBytes crypto 12)) "hex"))
         ; data structures
-        client-queues (atom {}) ; [clientKey uuid] -> [{:timestamp ... :message ...} ...]
-        contracts (atom {}) ; infoHash -> {clientKey: {uuid: {type: refresh/collect/respond contract: ... }}}
-        client-listeners (atom []) ; [clientKey uuid] -> chan
+        client-queues (atom {}) 
+        contracts (atom {}) 
+        client-listeners (atom []) 
         public-peers (atom {}) ; list of URLs of known friends
         ; service components
         bt (torrent/make-client #js {:peerId peerId :path downloads-dir})
         dht (bt :dht)
         ; TODO: this arg shouldn't be hardcoded - wt not setting it correctly
-        web (web/make configuration (api) downloads-dir public-peers)
+        web (web/make configuration api-atom clients downloads-dir public-peers)
         public-url (if (not (@configuration :private)) (or (@configuration :URL) (str ":" (web :port))))
         node-pool (pool/connect (bt :client) const/public-pool-name public-url public-peers)]
     

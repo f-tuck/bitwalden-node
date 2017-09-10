@@ -21,7 +21,7 @@
     [ip port]))
 
 (defn receive-message [wire message]
-  (let [decoded-js (.decode js/Bencode (.toString message))
+  (let [decoded-js (.decode bencode (.toString message))
         decoded (js->clj decoded-js)]
     (debug "message:" decoded)))
 

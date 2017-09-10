@@ -38,6 +38,21 @@
      ; immediately ACK
      true)
 
+   :dht-get
+   (fn [params clients bt]
+     (dht/get-value (.. bt -dht) (get params "infohash")))
+   
+   :dht-put
+   (fn [params clients bt]
+     ; TODO: contract to repeatedly update this
+     (dht/put-value
+       (.. bt -dht)
+       (get params "v")
+       (get params "k")
+       (get params "salt")
+       (get params "seq")
+       (get params "s.dht")))
+
    :get-queue
    (fn [params clients]
      (go (let [[k uid] (web/ids params)

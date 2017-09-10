@@ -22,20 +22,20 @@
 (defn write-header [res code & [headers]]
   (.writeHead res code (clj->js (merge {"Content-Type" "application/json"} headers))))
 
-(defn jsonrpc-router [api-atom clients method params]
+(defn jsonrpc-router [api-atom clients bt method params]
   (let [api-call (@api-atom (keyword method))]
     (if api-call
       (fn [params callback]
         (go
           (debug "JSON RPC call:" method (clj->js params))
-          (let [result (api-call (js->clj params) clients method)
+          (let [result (api-call (js->clj params) clients bt method)
                 result (if (implements? cljs.core.async.impl.protocols/Channel result) (<! result) result)]
             (callback nil (clj->js result))))))))
 
-(defn make-json-rpc-server [api clients]
-  (.middleware (.server jayson #js {} #js {:router (partial jsonrpc-router api clients)})))
+(defn make-json-rpc-server [api clients bt]
+  (.middleware (.server jayson #js {} #js {:router (partial jsonrpc-router api clients bt)})))
 
-(defn make [configuration api-atom clients content-dir public-peers]
+(defn make [configuration api-atom bt clients content-dir public-peers]
   (let [app (express)
         requests-chan (chan)]
     
@@ -46,7 +46,7 @@
 
     (.use app "/sw/content" (.static express content-dir))
 
-    (.post app "/sw/rpc" (.json body-parser #js {:limit "1mb" :type "*/*" }) (make-json-rpc-server api-atom clients))
+    (.post app "/sw/rpc" (.json body-parser #js {:limit "1mb" :type "*/*" }) (make-json-rpc-server api-atom clients bt))
     
     ; handle requests
     (let [root-chan (<<< #(.get app "/" %))

@@ -1,7 +1,7 @@
 (ns sharewode-node.core
   (:require [sharewode-node.utils :refer [<<< sha1 to-json buf-hex timestamp-now ensure-downloads-dir]]
             [sharewode-node.config :as config]
-            [sharewode-node.dht :as dht :refer [put-value get-value]]
+            [sharewode-node.dht :as dht]
             [sharewode-node.torrent :as torrent]
             [sharewode-node.web :as web]
             [sharewode-node.pool :as pool]
@@ -14,7 +14,7 @@
 (.install (nodejs/require "source-map-support"))
 (defonce debug ((nodejs/require "debug") "sharewode-node.core"))
 (defonce crypto (nodejs/require "crypto"))
-(defonce bencode (nodejs/require "bencode"))
+(defonce wt (nodejs/require "webtorrent"))
 
 (nodejs/enable-util-print!)
 
@@ -75,16 +75,14 @@
         client-listeners (atom []) 
         public-peers (atom {}) ; list of URLs of known friends
         ; service components
-        bt (torrent/make-client #js {:peerId peerId :path downloads-dir})
-        dht (bt :dht)
-        ; TODO: this arg shouldn't be hardcoded - wt not setting it correctly
-        web (web/make configuration api-atom clients downloads-dir public-peers)
+        bt (wt. {:peerId peerId :path downloads-dir})
+        web (web/make configuration api-atom bt clients downloads-dir public-peers)
         public-url (if (not (@configuration :private)) (or (@configuration :URL) (str ":" (web :port))))
-        node-pool (pool/connect (bt :client) const/public-pool-name public-url public-peers)]
+        node-pool (pool/connect bt const/public-pool-name public-url public-peers)]
     
     (print "Sharewode server started.")
-    (print "Bittorrent nodeId:" (.. (bt :client) -nodeId))
-    (print "Bittorrent peerId:" (.. (bt :client) -peerId))
+    (print "Bittorrent nodeId:" (.. bt -nodeId))
+    (print "Bittorrent peerId:" (.. bt -peerId))
     (print "WebAPI port:" (web :port))
     (print "Downloads dir:" downloads-dir)
     
@@ -158,7 +156,7 @@
                                                  client (web/ensure-client-chan! client-queues uuid pkey)]
                                              ; TODO: contract to repeatedly update this 
                                              (go (put! (client :chan-to-client)
-                                                       (<! (put-value dht
+                                                       (<! (dht/put-value (.. bt -dht)
                                                                       (get params "v")
                                                                       (get params "k")
                                                                       (get params "salt")
@@ -172,7 +170,7 @@
                                                  uuid (get params "u")
                                                  client (web/ensure-client-chan! client-queues uuid pkey)]
                                              (go (put! (client :chan-to-client)
-                                                       (<! (get-value dht (get params "infohash")))))
+                                                       (<! (dht/get-value (.. bt -dht) (get params "infohash")))))
                                              (put! result-chan [200 true]))
                                            (put! result-chan [403 false]))
                       ; the RPC call to return the current contents of the queue

@@ -117,7 +117,8 @@
     (if (> (count pending) 0)
       (do (put! c pending)
           (close! c)
-          (assoc-in clients [:listeners k uid] nil))
+          (assoc-in clients [:listeners k uid] nil) 
+          clients)
       ; add the listener
       (update-in clients [:listeners k uid] conj c))))
 

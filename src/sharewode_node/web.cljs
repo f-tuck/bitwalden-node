@@ -42,7 +42,7 @@
     ; parse incoming data
     (.use app (cookie))
 
-    (.use app (.urlencoded body-parser #js {:extended true :limit "1mb"}))
+    (.use app (.urlencoded body-parser #js {:extended true}))
 
     (.use app "/sw/content" (.static express content-dir))
 

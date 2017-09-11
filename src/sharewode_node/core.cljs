@@ -41,7 +41,7 @@
    :dht-get
    (fn [params clients bt]
      (dht/get-value (.. bt -dht) (get params "infohash")))
-   
+
    :dht-put
    (fn [params clients bt]
      ; TODO: contract to repeatedly update this
@@ -52,6 +52,13 @@
        (get params "salt")
        (get params "seq")
        (get params "s.dht")))
+
+   :seed
+   (fn [params clients bt content-dir]
+     (torrent/seed bt
+                   (get params "name")
+                   (get params "content")
+                   content-dir))
 
    :get-queue
    (fn [params clients]

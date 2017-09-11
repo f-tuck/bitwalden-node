@@ -71,14 +71,10 @@
           content
           (fn [err torrent-blob]
             (let [pre-torrent (parse-torrent torrent-blob)
-                  torrent (.seed (bt :client) content #js {:path (str downloads-dir "/" (.-infoHash pre-torrent))} ;#js {:name content-name :createdBy "sharewode"}
+                  torrent (.seed bt content #js {:path (str downloads-dir "/" (.-infoHash pre-torrent))} ;#js {:name content-name :createdBy "sharewode"}
                                  (fn [torrent]
-                                   (put! c (.-infoHash torrent))
-                                   (close! c)))]
-              (.on torrent "wire"
-                   (fn [wire addr]
-                     (js/console.log "New wire" addr (.-peerId wire))
-                     (.use wire (make-protocol bt (.-infoHash torrent) wire addr)))))))))
+                                   (put! c [nil (.-infoHash torrent)])
+                                   (close! c)))])))))
     c))
 
 ; join a name-only party

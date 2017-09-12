@@ -105,9 +105,6 @@
         downloads-dir (ensure-downloads-dir)
         peerId (str (.toString (js/Buffer. const/client-string) "hex") (.toString (js/Buffer. (.randomBytes crypto 12)) "hex"))
         ; data structures
-        client-queues (atom {}) 
-        contracts (atom {}) 
-        client-listeners (atom []) 
         public-peers (atom {}) ; list of URLs of known friends
         ; service components
         bt (wt. {:peerId peerId :path downloads-dir})

@@ -60,6 +60,19 @@
                    (get params "content")
                    content-dir))
 
+   :torrent-fetch
+   (fn [params clients bt content-dir]
+     (let [[k uid] (web/ids params)
+           retrieval-chan (torrent/add bt (get params "infohash") content-dir)]
+       (go
+         (loop []
+           (let [download-update (<! retrieval-chan)]
+             (when download-update
+               (swap! clients web/send-to-client k uid download-update)
+               (if (not= (get download-update "download") "done")
+                 (recur))))))
+       (get params "u")))
+
    :get-queue
    (fn [params clients]
      (go (let [[k uid] (web/ids params)

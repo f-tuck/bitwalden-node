@@ -53,7 +53,7 @@
        (get params "seq")
        (get params "s.dht")))
 
-   :seed
+   :torrent-seed
    (fn [params clients bt content-dir]
      (torrent/seed bt
                    (get params "name")

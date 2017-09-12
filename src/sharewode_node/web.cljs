@@ -42,6 +42,11 @@
     ; parse incoming data
     (.use app (cookie))
 
+    (.use app (fn [req res n]
+                (.header res "Access-Control-Allow-Origin" "*")
+                (.header res "Access-Control-Allow-Headers" "Origin, X-Requested-With, Content-Type, Accept")
+                (n)))
+
     (.use app (.urlencoded body-parser #js {:extended true}))
 
     (.use app "/sw/content" (.static express content-dir))

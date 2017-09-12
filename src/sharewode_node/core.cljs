@@ -36,7 +36,7 @@
          (let [[k uid] (web/ids params)]
            (swap! clients web/send-to-client k uid (get params "p"))))
      ; immediately ACK
-     true)
+     (get params "u"))
 
    :dht-get
    (fn [params clients bt]

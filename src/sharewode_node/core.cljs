@@ -83,6 +83,7 @@
            (go (<! (timeout (js/Math.min channel-timeout const/channel-timeout-max)))
                (close! c))
            (let [response (<! c)]
+             (swap! clients web/remove-queue-listener k uid c)
              ; return valid empty queue if there was no response
              (or response [])))))})
 

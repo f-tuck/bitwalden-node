@@ -108,6 +108,20 @@
       ; add the listener
       (update-in clients [:listeners k uid] conj c))))
 
+(defn remove-queue-listener [clients k uid c]
+  (let [channels (get-in clients [:listeners k uid])
+        clients (if (> (count channels) 1)
+                  (update-in clients
+                             [:listeners k uid]
+                             (fn [channels]
+                               (remove #(= % c) channels)))
+                  (update-in clients
+                             [:listeners k]
+                             dissoc uid))]
+    (if (> (count (get-in clients [:listeners k])) 0)
+      clients
+      (update-in clients [:listeners] dissoc k))))
+
 (defn send-to-client [clients k uid payload]
   (let [packet {:payload payload :timestamp (timestamp-now)}
         listeners (get-in clients [:listeners k uid])]

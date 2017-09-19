@@ -12,6 +12,10 @@
 (defonce bs58 (nodejs/require "bs58"))
 (defonce bencode (nodejs/require "bencode"))
 
+; compute a dht address hash
+(defn address [k salt]
+  (sha1 (js/Buffer.concat #js [(js/Buffer. (bs58.decode k)) (js/Buffer. salt)])))
+
 ; get a value from a DHT address (BEP44)
 (defn get-value [dht infoHash]
   (go

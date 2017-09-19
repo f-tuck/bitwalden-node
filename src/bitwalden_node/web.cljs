@@ -49,14 +49,14 @@
 
     (.use app (.urlencoded body-parser #js {:extended true}))
 
-    (.use app "/sw/content" (.static express content-dir))
+    (.use app "/bw/content" (.static express content-dir))
 
-    (.post app "/sw/rpc" (.json body-parser #js {:limit "1mb" :type "*/*" }) (make-json-rpc-server api-atom clients bt content-dir))
+    (.post app "/bw/rpc" (.json body-parser #js {:limit "1mb" :type "*/*" }) (make-json-rpc-server api-atom clients bt content-dir))
     
     ; handle requests
     (let [root-chan (<<< #(.get app "/" %))
-          info-chan (<<< #(.get app "/sw/info" %))
-          peers-chan (<<< #(.get app "/sw/peers" %))]
+          info-chan (<<< #(.get app "/bw/info" %))
+          peers-chan (<<< #(.get app "/bw/peers" %))]
       
       (go-loop []
                (let [[req res cb] (<! root-chan)]

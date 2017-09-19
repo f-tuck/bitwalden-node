@@ -35,10 +35,10 @@
 (defn make-json-rpc-server [api clients bt content-dir]
   (.middleware (.server jayson #js {} #js {:router (partial jsonrpc-router api clients bt content-dir)})))
 
-(defn make [configuration api-atom bt clients content-dir public-peers]
+(defn make [configuration api-atom web-api-atom bt clients content-dir public-peers]
   (let [app (express)
         requests-chan (chan)]
-    
+
     ; parse incoming data
     (.use app (cookie))
 
@@ -53,32 +53,18 @@
 
     (.post app "/bw/rpc" (.json body-parser #js {:limit "1mb" :type "*/*" }) (make-json-rpc-server api-atom clients bt content-dir))
     
-    ; handle requests
-    (let [root-chan (<<< #(.get app "/" %))
-          info-chan (<<< #(.get app "/bw/info" %))
-          peers-chan (<<< #(.get app "/bw/peers" %))]
-      
-      (go-loop []
-               (let [[req res cb] (<! root-chan)]
-                 (write-header res 200)
-                 (.end res (to-json true))
-                 (recur)))
-      
-      (go-loop []
-               (let [[req res cb] (<! peers-chan)]
-                 (write-header res 200)
-                 (.end res (to-json @public-peers))
-                 (recur)))
-      
-      (go-loop []
-               (let [[req res cb] (<! info-chan)]
-                 (write-header res 200)
-                 (.end res (to-json {:bitwalden true}))
-                 (recur))))
+    (.use app (fn [req res cb]
+                (let [path (.. req -path)
+                      call (or (get @web-api-atom path) (get @web-api-atom (str path "/")))]
+                  (if (and call (= (.. req -method) "GET"))
+                    (do
+                      (write-header res 200)
+                      (.end res (to-json (call public-peers))))
+                    (cb)))))
     
     ; serve
     (.listen app const/web-api-port)
-    
+
     {:server app :port const/web-api-port :requests-chan requests-chan}))
 
 (defn ids [params]

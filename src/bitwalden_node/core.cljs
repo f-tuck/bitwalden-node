@@ -21,6 +21,7 @@
 
 ; reloadable code hack
 (defonce api-atom (atom {}))
+(defonce web-api-atom (atom {}))
 
 ; JSON-RPC API
 
@@ -109,6 +110,15 @@
 (reset! api-atom api)
 
 ; JSON API
+
+(def web-api
+  {"/" (fn [] true)
+   "/bw/info" (fn [] {:bitwalden const/version})
+   "/bw/peers" (fn [public-peers] @public-peers)})
+
+; hack for reloadable code
+(reset! web-api-atom web-api)
+
 ; long running threads
 
 (defn run-dht-contracts [bt clients]
@@ -142,7 +152,7 @@
         public-peers (atom {}) ; list of URLs of known friends
         ; service components
         bt (wt. {:peerId peerId :path downloads-dir})
-        web (web/make configuration api-atom bt clients downloads-dir public-peers)
+        web (web/make configuration api-atom web-api-atom bt clients downloads-dir public-peers)
         public-url (if (not (@configuration :private)) (or (@configuration :URL) (str ":" (web :port))))
         node-pool (pool/connect bt const/public-pool-name public-url public-peers)]
 

@@ -1,17 +1,15 @@
 (ns bitwalden-node.contracts
   (:require [bitwalden-node.utils :refer [timestamp-now]]
             [bitwalden-node.dht :as dht]
+            [bitwalden-node.constants :as const]
             [cljs.nodejs :as nodejs]
             [cljs.core.async :as async :refer [<! chan put!]])
   (:require-macros [cljs.core.async.macros :refer [go go-loop]]))
 
 (defonce debug ((nodejs/require "debug") "bitwalden-node.contracts"))
 
-(def REMAINING-REFRESH-DEFAULT (* 3))
-(def REFRESH-INTERVAL-MS (* 10 1000))
-
 (defn dht-add [clients timestamp dht-put-params & [remaining]]
-  (let [remaining (or remaining REMAINING-REFRESH-DEFAULT)]
+  (let [remaining (or remaining const/dht-refresh-count)]
     (if (> remaining 0)
       (let [address [:contracts :refresh (get dht-put-params "k") (get dht-put-params "salt")]
             ; find the index of existing k,salt refresh contract, if any
@@ -36,7 +34,7 @@
 (defn dht-get-due [clients]
   (let [dht-contracts (get-in clients [:contracts :refresh])]
     (filter (fn [[k salt contract]]
-              (< (contract :last-refresh) (- (timestamp-now) REFRESH-INTERVAL-MS)))
+              (< (contract :last-refresh) (- (timestamp-now) const/dht-refresh-interval-ms)))
             (for [[k contracts] dht-contracts [salt contract] contracts]
               [k salt contract (contract :remaining)]))))
 

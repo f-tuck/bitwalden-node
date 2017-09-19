@@ -57,7 +57,6 @@
                [err address-hash node-count] result]
            (if (and (nil? err) address-hash)
              (swap! clients contracts/dht-add (timestamp-now) params))
-           (print result)
            result)))
 
    :torrent-seed
@@ -107,10 +106,10 @@
 
 (defn run-dht-contracts [bt clients]
   (go
-    (debug "Updating dht contracts.")
     (let [contracts-to-refresh (contracts/dht-get-due @clients)
           updated-contracts (<! (contracts/dht-refresh-data bt contracts-to-refresh))]
       (when (> (count updated-contracts) 0)
+        (debug "Updated" (count updated-contracts) "contracts.")
         (doall (for [[k salt updated remaining] updated-contracts]
                  (swap! clients contracts/dht-add (timestamp-now) updated remaining)))))))
 
@@ -148,9 +147,6 @@
     (go-loop []
              ; TODO: rather than run every minute schedule based on queue contents
              (<! (timeout 1000))
-             (let [p (get-in @clients [:contracts :refresh])]
-               (if (> (count p) 0)
-                 (print p)))
              (<! (run-dht-contracts bt clients))
              (recur))
 

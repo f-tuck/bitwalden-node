@@ -6,9 +6,9 @@ cd "$mydir"
 
 if [ "$1" = "" ]
 then
-  echo "Deploys the Sharewode server node to the server specified."
+  echo "Deploys the Bitwalden server node to the server specified."
   echo "Usage: $0 DESTINATION-HOST[,DESTINATION-HOST-2,...] [PATH]"
-  echo "e.g. $0 my-server.net,my-other-server.net ~/bin/contrib/sharewode-node"
+  echo "e.g. $0 my-server.net,my-other-server.net ~/bin/contrib/bitwalden-node"
 else
   extravars="src=${parentdir}/"
   host="${1}"

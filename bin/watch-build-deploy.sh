@@ -19,7 +19,7 @@ else
       for server in ${1}
       do
         echo "Syncing to ${server}:"
-        rsync -avz ./ ${server}:~/sharewode-node/ --delete --recursive --exclude 'node*' --exclude '.*.swp' --exclude '.git/'
+        rsync -avz ./ ${server}:~/bitwalden-node/ --delete --recursive --exclude 'node*' --exclude '.*.swp' --exclude '.git/'
       done
       IFS=${OIFS}
       echo "Done."

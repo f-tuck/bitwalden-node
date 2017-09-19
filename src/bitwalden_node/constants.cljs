@@ -1,4 +1,4 @@
-(ns sharewode-node.constants)
+(ns bitwalden-node.constants)
 
 (def version "0001")
 (def client-string (str "-BW" version "-"))

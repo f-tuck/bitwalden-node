@@ -1,5 +1,5 @@
-(ns sharewode-node.dht
-  (:require [sharewode-node.utils :refer [<<< buffer serialize-error sha1]]
+(ns bitwalden-node.dht
+  (:require [bitwalden-node.utils :refer [<<< buffer serialize-error sha1]]
             [cljs.nodejs :as nodejs]
             [cljs.core.async :refer [<! timeout chan close! put!]])
   (:require-macros [cljs.core.async.macros :refer [go go-loop]]))
@@ -7,7 +7,7 @@
 (nodejs/enable-util-print!)
 
 ; nodejs requirements
-(defonce debug ((nodejs/require "debug") "sharewode-node.dht"))
+(defonce debug ((nodejs/require "debug") "bitwalden-node.dht"))
 (defonce DHT (nodejs/require "bittorrent-dht"))
 (defonce bs58 (nodejs/require "bs58"))
 (defonce bencode (nodejs/require "bencode"))

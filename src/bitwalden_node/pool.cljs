@@ -1,7 +1,7 @@
-(ns sharewode-node.pool
+(ns bitwalden-node.pool
   (:require [cljs.nodejs :as nodejs]
             [cljs.core.async :refer [chan put! <! close! timeout]]
-            [sharewode-node.utils :refer [buf-hex <<<]]))
+            [bitwalden-node.utils :refer [buf-hex <<<]]))
 
 (nodejs/enable-util-print!)
 

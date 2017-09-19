@@ -1,19 +1,19 @@
-(ns sharewode-node.core
-  (:require [sharewode-node.utils :refer [<<< sha1 to-json buf-hex timestamp-now ensure-downloads-dir]]
-            [sharewode-node.config :as config]
-            [sharewode-node.dht :as dht]
-            [sharewode-node.torrent :as torrent]
-            [sharewode-node.web :as web]
-            [sharewode-node.pool :as pool]
-            [sharewode-node.constants :as const]
-            [sharewode-node.contracts :as contracts]
+(ns bitwalden-node.core
+  (:require [bitwalden-node.utils :refer [<<< sha1 to-json buf-hex timestamp-now ensure-downloads-dir]]
+            [bitwalden-node.config :as config]
+            [bitwalden-node.dht :as dht]
+            [bitwalden-node.torrent :as torrent]
+            [bitwalden-node.web :as web]
+            [bitwalden-node.pool :as pool]
+            [bitwalden-node.constants :as const]
+            [bitwalden-node.contracts :as contracts]
             [cljs.nodejs :as nodejs]
             [cljs.core.async :refer [<! put! chan timeout alts! close!]])
   (:require-macros [cljs.core.async.macros :refer [go go-loop]]))
 
 ; nodejs requirements
 (.install (nodejs/require "source-map-support"))
-(defonce debug ((nodejs/require "debug") "sharewode-node.core"))
+(defonce debug ((nodejs/require "debug") "bitwalden-node.core"))
 (defonce crypto (nodejs/require "crypto"))
 (defonce wt (nodejs/require "webtorrent"))
 
@@ -141,7 +141,7 @@
         public-url (if (not (@configuration :private)) (or (@configuration :URL) (str ":" (web :port))))
         node-pool (pool/connect bt const/public-pool-name public-url public-peers)]
     
-    (print "Sharewode server started.")
+    (print "Bitwalden server node started.")
     (print "Bittorrent nodeId:" (.. bt -nodeId))
     (print "Bittorrent peerId:" (.. bt -peerId))
     (print "WebAPI port:" (web :port))

@@ -1,4 +1,4 @@
-(ns sharewode-node.utils
+(ns bitwalden-node.utils
   (:require [cljs.core.async :refer [close! put! chan]]
             [cljs.nodejs :as nodejs])
   (:require-macros [cljs.core.async.macros :refer [go]]))

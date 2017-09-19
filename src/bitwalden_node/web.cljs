@@ -1,6 +1,6 @@
-(ns sharewode-node.web
-  (:require [sharewode-node.utils :refer [<<< to-json buf-hex timestamp-now pr-thru]]
-            [sharewode-node.constants :as const]
+(ns bitwalden-node.web
+  (:require [bitwalden-node.utils :refer [<<< to-json buf-hex timestamp-now pr-thru]]
+            [bitwalden-node.constants :as const]
             [cljs.nodejs :as nodejs]
             [cljs.core.async :refer [<! put! timeout chan sliding-buffer close! mult tap untap]])
   (:require-macros [cljs.core.async.macros :refer [go go-loop]]))
@@ -9,7 +9,7 @@
 
 ; nodejs requirements
 (defonce crypto (nodejs/require "crypto"))
-(defonce debug ((nodejs/require "debug") "sharewode-node.web"))
+(defonce debug ((nodejs/require "debug") "bitwalden-node.web"))
 (defonce express (nodejs/require "express"))
 (defonce url (nodejs/require "url"))
 (defonce cookie (nodejs/require "cookie-parser"))

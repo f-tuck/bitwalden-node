@@ -1,4 +1,4 @@
-(defproject sharewode-node "0.1.0-SNAPSHOT"
+(defproject bitwalden-node "0.1.0-SNAPSHOT"
   :description "FIXME: write this!"
   :url "http://example.com/FIXME"
 
@@ -21,22 +21,22 @@
               [{:id "dev"
                 :source-paths ["src"]
                 :figwheel true
-                :compiler {:main sharewode-node.core
-                           :output-to "target/server_dev/sharewode_node.js"
+                :compiler {:main bitwalden-node.core
+                           :output-to "target/server_dev/bitwalden_node.js"
                            :output-dir "target/server_dev"
                            :target :nodejs
                            :optimizations :none
                            :source-map true}}
                {:id "prod"
                 :source-paths ["src"]
-                :compiler {:output-to "build/sharewode-server-node.js"
+                :compiler {:output-to "build/bitwalden-server-node.js"
                            :output-dir "build"
                            :target :nodejs
-                           :source-map "build/sharewode-server-node.js.map"
+                           :source-map "build/bitwalden-server-node.js.map"
                            :optimizations :simple}}
                {:id "test"
                 :source-paths ["test"]
-                :compiler {:main sharewode-node.test
+                :compiler {:main bitwalden-node.test
                            :output-to "target/test/test.js"
                            :output-dir "target/test"
                            ;:exclude "sharwode-node.core"

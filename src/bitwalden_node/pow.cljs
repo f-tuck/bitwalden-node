@@ -1,4 +1,4 @@
-(ns sharewode-node.pow)
+(ns bitwalden-node.pow)
 
 (defn make-token []
   2)

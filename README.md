@@ -16,7 +16,7 @@ Console 1:
 
 Console 2:
 
-	./build/node/bin/node target/server_dev/sharewode_node.js
+	./build/node/bin/node target/server_dev/bitwalden_node.js
 
 ## Thanks ##
 

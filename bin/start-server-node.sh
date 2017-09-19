@@ -18,7 +18,7 @@ done
 if [ "$DEVMODE" = "1" ]
 then
   echo "Starting server in dev mode."
-  node target/server_dev/sharewode_node.js $@
+  node target/server_dev/bitwalden_node.js $@
 else
-  node build/sharewode-server-node.js $@
+  node build/bitwalden-server-node.js $@
 fi

@@ -1,11 +1,11 @@
-(ns sharewode-node.contracts
-  (:require [sharewode-node.utils :refer [timestamp-now]]
-            [sharewode-node.dht :as dht]
+(ns bitwalden-node.contracts
+  (:require [bitwalden-node.utils :refer [timestamp-now]]
+            [bitwalden-node.dht :as dht]
             [cljs.nodejs :as nodejs]
             [cljs.core.async :as async :refer [<! chan put!]])
   (:require-macros [cljs.core.async.macros :refer [go go-loop]]))
 
-(defonce debug ((nodejs/require "debug") "sharewode-node.contracts"))
+(defonce debug ((nodejs/require "debug") "bitwalden-node.contracts"))
 
 (def REMAINING-REFRESH-DEFAULT (* 3))
 (def REFRESH-INTERVAL-MS (* 10 1000))

@@ -1,7 +1,7 @@
-(ns sharewode-node.config
+(ns bitwalden-node.config
   (:require [cljs.nodejs :as nodejs]))
 
-(defonce debug ((nodejs/require "debug") "sharewode-node.config"))
+(defonce debug ((nodejs/require "debug") "bitwalden-node.config"))
 (defonce os (nodejs/require "os"))
 (defonce fs (nodejs/require "fs"))
 

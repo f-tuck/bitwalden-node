@@ -80,6 +80,15 @@
                  (recur))))))
        (get params "u")))
 
+   :channel-send
+   (fn [params clients bt content-dir])
+
+   :channel-listen
+   (fn [params clients bt content-dir])
+
+   :channel-respond
+   (fn [params clients bt content-dir])
+
    :get-queue
    (fn [params clients]
      (go (let [[k uid] (web/ids params)
@@ -111,6 +120,7 @@
 (def clients-struct
   {:queues {} ; clientKey -> uuid = timestamped-messages
    :contracts {} ; infoHash -> clientKey -> uuid = contract-details
+   ; not persisted:
    :listeners {}}) ; clientKey -> uuid = chan
 
 (defonce clients

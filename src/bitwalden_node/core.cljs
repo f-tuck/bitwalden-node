@@ -19,7 +19,10 @@
 
 (nodejs/enable-util-print!)
 
+; reloadable code hack
 (defonce api-atom (atom {}))
+
+; JSON-RPC API
 
 (def api
   {:ping
@@ -102,6 +105,10 @@
              ; return valid empty queue if there was no response
              (or response [])))))})
 
+; hack for reloadable code
+(reset! api-atom api)
+
+; JSON API
 ; long running threads
 
 (defn run-dht-contracts [bt clients]
@@ -113,12 +120,11 @@
         (doall (for [[k salt updated remaining] updated-contracts]
                  (swap! clients contracts/dht-add (timestamp-now) updated remaining)))))))
 
-; hack for reloadable code
-(reset! api-atom api)
+; core app data structure
 
 (def clients-struct
   {:queues {} ; clientKey -> uuid = timestamped-messages
-   :contracts {} ; infoHash -> clientKey -> uuid = contract-details
+   :contracts {} ; clientKey -> uuid = contract-details
    ; not persisted:
    :listeners {}}) ; clientKey -> uuid = chan
 

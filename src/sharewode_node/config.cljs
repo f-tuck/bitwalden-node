@@ -5,8 +5,8 @@
 (defonce os (nodejs/require "os"))
 (defonce fs (nodejs/require "fs"))
 
-(defn default-config-filename []
-  (str (.homedir os) "/.sharewode-node.json"))
+(defn make-filename [base-name]
+  (str (.homedir os) "/.bitwalden/" base-name ".json"))
 
 (defn make-exit-fn [configuration filename]
   (fn [options err]

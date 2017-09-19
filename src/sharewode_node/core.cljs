@@ -119,7 +119,7 @@
 ;*** entry point ***;
 
 (defn -main []
-  (let [configfile (config/default-config-filename)
+  (let [configfile (config/make-filename "node-config")
         configuration (atom (config/load-to-clj configfile))
         downloads-dir (ensure-downloads-dir)
         peerId (str (.toString (js/Buffer. const/client-string) "hex") (.toString (js/Buffer. (.randomBytes crypto 12)) "hex"))

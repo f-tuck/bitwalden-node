@@ -140,16 +140,10 @@
         web (web/make configuration api-atom bt clients downloads-dir public-peers)
         public-url (if (not (@configuration :private)) (or (@configuration :URL) (str ":" (web :port))))
         node-pool (pool/connect bt const/public-pool-name public-url public-peers)]
-    
-    (print "Bitwalden server node started.")
-    (print "Bittorrent nodeId:" (.. bt -nodeId))
-    (print "Bittorrent peerId:" (.. bt -peerId))
-    (print "WebAPI port:" (web :port))
-    (print "Downloads dir:" downloads-dir)
-    
+
     ; when we exit we want to save the config
     (config/install-exit-handler configuration configfile)
-    
+
     ; thread that runs every minute and updates refresher contracts
     (go-loop []
              ; TODO: rather than run every minute schedule based on queue contents
@@ -159,12 +153,18 @@
                  (print p)))
              (<! (run-dht-contracts bt clients))
              (recur))
-    
+
     ; thread that runs every second and flushes old message queues
     (go-loop []
              (<! (timeout 1000))
              ;(debug "Flushing client queues.")
              ; TODO: this.
-             (recur))))
+             (recur))
+
+    (print "Bitwalden server node started.")
+    (print "Bittorrent nodeId:" (.. bt -nodeId))
+    (print "Bittorrent peerId:" (.. bt -peerId))
+    (print "WebAPI port:" (web :port))
+    (print "Downloads dir:" downloads-dir)))
 
 (set! *main-cli-fn* -main)

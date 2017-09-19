@@ -1,7 +1,8 @@
 (ns bitwalden-node.torrent
   (:require [cljs.nodejs :as nodejs]
             [cljs.core.async :refer [chan put! <! close! timeout]]
-            [bitwalden-node.utils :refer [buf-hex <<<]])
+            [bitwalden-node.utils :refer [buf-hex <<<]]
+            [bitwalden-node.constants :as constants])
   (:require-macros [cljs.core.async.macros :refer [go go-loop]]))
 
 (nodejs/enable-util-print!)
@@ -26,7 +27,7 @@
           (fn [err torrent-blob]
             (let [pre-torrent (parse-torrent torrent-blob)
                   infoHash (.-infoHash pre-torrent)
-                  torrent (.seed bt content #js {:path (str downloads-dir "/" infoHash)} ;#js {:name content-name :createdBy "bitwalden"}
+                  torrent (.seed bt content #js {:path (str downloads-dir "/" infoHash :createdBy constants/created-by)}
                                  (fn [torrent]
                                    (debug "Seeding" infoHash downloads-dir)
                                    (put! c [nil (.-infoHash torrent)])

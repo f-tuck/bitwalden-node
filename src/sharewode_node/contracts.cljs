@@ -65,8 +65,3 @@
                    results)))
              results)))
 
-(defn dht-update [clients update-contracts]
-  ;(update-in clients [:contracts :refresh]
-  ;  )
-  )
-

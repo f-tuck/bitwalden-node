@@ -6,6 +6,7 @@
             [sharewode-node.web :as web]
             [sharewode-node.pool :as pool]
             [sharewode-node.constants :as const]
+            [sharewode-node.contracts :as contracts]
             [cljs.nodejs :as nodejs]
             [cljs.core.async :refer [<! put! chan timeout alts! close!]])
   (:require-macros [cljs.core.async.macros :refer [go go-loop]]))
@@ -45,13 +46,19 @@
    :dht-put
    (fn [params clients bt]
      ; TODO: contract to repeatedly update this
-     (dht/put-value
-       (.. bt -dht)
-       (get params "v")
-       (get params "k")
-       (get params "salt")
-       (get params "seq")
-       (get params "s.dht")))
+     (go (let [result
+               (<! (dht/put-value
+                     (.. bt -dht)
+                     (get params "v")
+                     (get params "k")
+                     (get params "salt")
+                     (get params "seq")
+                     (get params "s.dht")))
+               [err address-hash node-count] result]
+           (if (and (nil? err) address-hash)
+             (swap! clients contracts/dht-add (timestamp-now) params))
+           (print result)
+           result)))
 
    :torrent-seed
    (fn [params clients bt content-dir]
@@ -86,6 +93,17 @@
              (swap! clients web/remove-queue-listener k uid c)
              ; return valid empty queue if there was no response
              (or response [])))))})
+
+; long running threads
+
+(defn run-dht-contracts [bt clients]
+  (go
+    (debug "Updating dht contracts.")
+    (let [contracts-to-refresh (contracts/dht-get-due @clients)
+          updated-contracts (<! (contracts/dht-refresh-data bt contracts-to-refresh))]
+      (when (> (count updated-contracts) 0)
+        (doall (for [[k salt updated remaining] updated-contracts]
+                 (swap! clients contracts/dht-add (timestamp-now) updated remaining)))))))
 
 ; hack for reloadable code
 (reset! api-atom api)
@@ -122,7 +140,17 @@
     ; when we exit we want to save the config
     (config/install-exit-handler configuration configfile)
     
-    ; thread that runs every second and flushes old messages and clients
+    ; thread that runs every minute and updates refresher contracts
+    (go-loop []
+             ; TODO: rather than run every minute schedule based on queue contents
+             (<! (timeout 1000))
+             (let [p (get-in @clients [:contracts :refresh])]
+               (if (> (count p) 0)
+                 (print p)))
+             (<! (run-dht-contracts bt clients))
+             (recur))
+    
+    ; thread that runs every second and flushes old message queues
     (go-loop []
              (<! (timeout 1000))
              ;(debug "Flushing client queues.")

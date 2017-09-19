@@ -47,3 +47,7 @@
                 (.exit process 1))))
     d))
 
+(defn serialize-error [e]
+  (if e
+    {:code (.. e -code)
+     :message (.. e -message)}))

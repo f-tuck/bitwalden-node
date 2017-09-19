@@ -1,5 +1,5 @@
 (ns sharewode-node.dht
-  (:require [sharewode-node.utils :refer [<<< buffer]]
+  (:require [sharewode-node.utils :refer [<<< buffer serialize-error sha1]]
             [cljs.nodejs :as nodejs]
             [cljs.core.async :refer [<! timeout chan close! put!]])
   (:require-macros [cljs.core.async.macros :refer [go go-loop]]))
@@ -24,7 +24,7 @@
                       :seq (-> response (get "seq"))
                       :v (-> response (get "v") (.toString))
                       :sig (-> response (get "sig") (.toString "hex"))})]
-      [err response])))
+      [(serialize-error err) response])))
 
 ; put a value into the DHT (BEP44)
 (defn put-value [dht value public-key-b58 salt seq-id signature-hex]
@@ -36,5 +36,5 @@
                       :sign (fn [buf] (js/Buffer. signature-hex "hex"))}
           [err infoHash put-nodes-count] (<! (<<< #(.put dht (clj->js put-params) %)))
           infoHash (if infoHash (.toString infoHash "hex"))]
-      [err infoHash put-nodes-count])))
+      [(serialize-error err) infoHash put-nodes-count])))
 

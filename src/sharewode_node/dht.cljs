@@ -19,21 +19,22 @@
           [err response] (<! (<<< #(.get dht infoHash %)))
           response (js->clj response)
           response (if response
-                     {:k (-> response (get "k") (bs58.encode))
-                      :salt (-> response (get "salt") (.toString))
-                      :seq (-> response (get "seq"))
-                      :v (-> response (get "v") (.toString))
-                      :sig (-> response (get "sig") (.toString "hex"))})]
+                     {"k" (-> response (get "k") (bs58.encode))
+                      "salt" (-> response (get "salt") (.toString))
+                      "seq" (-> response (get "seq"))
+                      "v" (-> response (get "v") (.toString))
+                      "s.dht" (-> response (get "sig") (.toString "hex"))})]
       [(serialize-error err) response])))
 
 ; put a value into the DHT (BEP44)
 (defn put-value [dht value public-key-b58 salt seq-id signature-hex]
   (go
-    (let [put-params {:k (-> public-key-b58 (bs58.decode) (js/Buffer.))
-                      :salt (js/Buffer. salt)
-                      :seq seq-id
-                      :v (js/Buffer. value)
-                      :sign (fn [buf] (js/Buffer. signature-hex "hex"))}
+    (let [put-params {"k" (-> public-key-b58 (bs58.decode) (js/Buffer.))
+                      "salt" (js/Buffer. salt)
+                      "seq" seq-id
+                      ;:cas (- seq-id 1)
+                      "v" (js/Buffer. value)
+                      "sign" (fn [buf] (js/Buffer. signature-hex "hex"))}
           [err infoHash put-nodes-count] (<! (<<< #(.put dht (clj->js put-params) %)))
           infoHash (if infoHash (.toString infoHash "hex"))]
       [(serialize-error err) infoHash put-nodes-count])))

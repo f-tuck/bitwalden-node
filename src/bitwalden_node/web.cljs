@@ -120,9 +120,6 @@
       ; otherwise queue this packet up
       (update-in clients [:queues k uid] conj packet))))
 
-(defn pow-check [req]
-  true)
-
 (defn authenticate [params]
   (let [public-key (-> params
                        (get "k")

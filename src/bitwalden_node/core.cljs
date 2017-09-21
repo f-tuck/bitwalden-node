@@ -49,7 +49,6 @@
 
    :dht-put
    (fn [params clients bt]
-     ; TODO: contract to repeatedly update this
      (go (let [result
                (<! (dht/put-value
                      (.. bt -dht)
@@ -166,7 +165,7 @@
              (<! (run-dht-contracts bt clients))
              (recur))
 
-    ; thread that runs every second and flushes old message queues
+    ; thread that runs every minute and flushes old message queues
     (go-loop []
              (<! (timeout 1000))
              ;(debug "Flushing client queues.")

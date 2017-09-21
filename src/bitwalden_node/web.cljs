@@ -42,17 +42,22 @@
     ; parse incoming data
     (.use app (cookie))
 
+    ; allows cross site requests
     (.use app (fn [req res n]
                 (.header res "Access-Control-Allow-Origin" "*")
                 (.header res "Access-Control-Allow-Headers" "Origin, X-Requested-With, Content-Type, Accept")
                 (n)))
 
+    ; allow url encoded requests
     (.use app (.urlencoded body-parser #js {:extended true}))
 
+    ; statically serve content (downloaded torrents) dir
     (.use app "/bw/content" (.static express content-dir))
 
+    ; hook up the JSON RPC API
     (.post app "/bw/rpc" (.json body-parser #js {:limit "1mb" :type "*/*" }) (make-json-rpc-server api-atom clients bt content-dir))
     
+    ; hook up the remaining JSON API calls
     (.use app (fn [req res cb]
                 (let [path (.. req -path)
                       call (or (get @web-api-atom path) (get @web-api-atom (str path "/")))]

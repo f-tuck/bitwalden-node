@@ -1,5 +1,5 @@
 (ns bitwalden-node.core
-  (:require [bitwalden-node.utils :refer [<<< sha1 to-json buf-hex timestamp-now ensure-downloads-dir]]
+  (:require [bitwalden-node.utils :refer [<<< sha1 to-json buf-hex timestamp-now]]
             [bitwalden-node.config :as config]
             [bitwalden-node.dht :as dht]
             [bitwalden-node.torrent :as torrent]
@@ -143,15 +143,16 @@
 ;*** entry point ***;
 
 (defn -main []
-  (let [configfile (config/make-filename "node-config")
+  (let [configfile (config/make-filename "node-config.json")
         configuration (atom (config/load-to-clj configfile))
-        downloads-dir (ensure-downloads-dir)
+        downloads-dir (config/ensure-dir (or (@configuration "downloads-dir") (config/make-filename "downloads")))
+        log-dir (config/ensure-dir (or (@configuration "log-dir") (config/make-filename "log")))
         peerId (str (.toString (js/Buffer. const/client-string) "hex") (.toString (js/Buffer. (.randomBytes crypto 12)) "hex"))
         ; data structures
         public-peers (atom {}) ; list of URLs of known friends
         ; service components
         bt (wt. {:peerId peerId :path downloads-dir})
-        web (web/make configuration api-atom web-api-atom bt clients downloads-dir public-peers)
+        web (web/make downloads-dir log-dir api-atom web-api-atom bt clients public-peers)
         public-url (if (not (@configuration :private)) (or (@configuration :URL) (str ":" (web :port))))
         node-pool (pool/connect bt const/public-pool-name public-url public-peers)]
 

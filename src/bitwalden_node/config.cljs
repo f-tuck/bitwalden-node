@@ -4,9 +4,20 @@
 (defonce debug ((nodejs/require "debug") "bitwalden-node.config"))
 (defonce os (nodejs/require "os"))
 (defonce fs (nodejs/require "fs"))
+(defonce mkdirp (nodejs/require "mkdirp"))
+(defonce process (nodejs/require "process"))
+
+(defn ensure-dir [d]
+  (mkdirp d
+          (fn [error]
+            (when error
+              (print "Error creating" d)
+              (print error)
+              (.exit process 1))))
+  d)
 
 (defn make-filename [base-name]
-  (str (.homedir os) "/.bitwalden/" base-name ".json"))
+  (str (.homedir os) "/.bitwalden/" base-name))
 
 (defn make-exit-fn [configuration filename]
   (fn [options err]

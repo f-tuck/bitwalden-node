@@ -1,6 +1,7 @@
 (ns bitwalden-node.web
   (:require [bitwalden-node.utils :refer [<<< to-json buf-hex timestamp-now pr-thru]]
             [bitwalden-node.constants :as const]
+            [bitwalden-node.config :as config]
             [cljs.nodejs :as nodejs]
             [cljs.core.async :refer [<! put! timeout chan sliding-buffer close! mult tap untap]])
   (:require-macros [cljs.core.async.macros :refer [go go-loop]]))
@@ -18,6 +19,8 @@
 (defonce bs58 (nodejs/require "bs58"))
 (defonce bencode (nodejs/require "bencode"))
 (defonce jayson (nodejs/require "jayson"))
+(defonce morgan (nodejs/require "morgan"))
+(defonce rotating-file-stream (nodejs/require "rotating-file-stream"))
 
 (defn write-header [res code & [headers]]
   (.writeHead res code (clj->js (merge {"Content-Type" "application/json"} headers))))
@@ -35,9 +38,16 @@
 (defn make-json-rpc-server [api clients bt content-dir]
   (.middleware (.server jayson #js {} #js {:router (partial jsonrpc-router api clients bt content-dir)})))
 
-(defn make [configuration api-atom web-api-atom bt clients content-dir public-peers]
+(defn make [content-dir log-dir api-atom web-api-atom bt clients public-peers]
   (let [app (express)
         requests-chan (chan)]
+
+    ; logging
+    (.use app (morgan "combined"
+                      #js {:stream
+                           (rotating-file-stream
+                             "access.log"
+                             #js {:interval "1d" :path log-dir})}))
 
     ; allows cross site requests
     (.use app (fn [req res n]

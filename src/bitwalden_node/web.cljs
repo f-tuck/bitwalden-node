@@ -39,9 +39,6 @@
   (let [app (express)
         requests-chan (chan)]
 
-    ; parse incoming data
-    (.use app (cookie))
-
     ; allows cross site requests
     (.use app (fn [req res n]
                 (.header res "Access-Control-Allow-Origin" "*")

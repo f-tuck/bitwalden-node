@@ -143,8 +143,10 @@
 ;*** entry point ***;
 
 (defn -main []
-  (let [configfile (config/make-filename "node-config.json")
-        configuration (atom (config/load-to-clj configfile))
+  (let [queues-file (config/make-filename "queues.json")
+        contracts-file (config/make-filename "contracts.json")
+        config-file (config/make-filename "node-config.json")
+        configuration (atom (config/load-to-clj config-file))
         downloads-dir (config/ensure-dir (or (@configuration "downloads-dir") (config/make-filename "downloads")))
         log-dir (config/ensure-dir (or (@configuration "log-dir") (config/make-filename "log")))
         peerId (str (.toString (js/Buffer. const/client-string) "hex") (.toString (js/Buffer. (.randomBytes crypto 12)) "hex"))
@@ -155,10 +157,16 @@
         web (web/make downloads-dir log-dir api-atom web-api-atom bt clients public-peers)
         public-url (if (not (@configuration :private)) (or (@configuration :URL) (str ":" (web :port))))
         node-pool (pool/connect bt const/public-pool-name public-url public-peers)]
-
-    ; when we exit we want to save the config
-    (config/install-exit-handler configuration configfile)
-
+    ; load our persisted datastructures
+    (swap! clients assoc
+           :queues (config/load-to-clj queues-file)
+           :contracts (config/load-to-clj contracts-file))
+    
+    ; when we exit we want to save datastructures we want to persist
+    (config/install-exit-handler
+      [[queues-file clients [:queues]]
+       [contracts-file clients [:contracts]]])
+    
     ; thread that runs every minute and updates refresher contracts
     (go-loop []
              ; TODO: rather than run every minute schedule based on queue contents

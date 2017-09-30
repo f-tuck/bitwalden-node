@@ -92,7 +92,12 @@
   (doall (map #(put! % [packet]) listeners)))
 
 (defn truncate-messages [clients k uid messages]
-  (assoc-in clients [:queues k uid] messages))
+  (if (> (count messages) 0)
+    (assoc-in clients [:queues k uid] messages)
+    (let [clients (update-in clients [:queues k] dissoc uid)]
+      (if (= (count (get-in clients [:queues k])) 0)
+        (update-in clients [:queues] dissoc k)
+        clients))))
 
 (defn add-queue-listener [clients k uid c after]
   (let [pending (get-pending-messages (get-in clients [:queues k uid]) after)

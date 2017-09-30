@@ -83,7 +83,7 @@
   [(get params "k") (get params "u")])
 
 (defn get-pending-messages [q after]
-  (filter #(> (% :timestamp) after) q))
+  (vec (filter #(> (% "timestamp") after) q)))
 
 (defn remove-listeners [listeners to-remove]
   (remove #(contains? (set to-remove) %) listeners))
@@ -130,7 +130,7 @@
         (doall (map #(close! %) listeners))
         (assoc-in clients [:listeners k uid] nil))
       ; otherwise queue this packet up
-      (update-in clients [:queues k uid] conj packet))))
+      (update-in clients [:queues k uid] (fnil conj []) packet))))
 
 (defn authenticate [params]
   (let [public-key (-> params

@@ -121,7 +121,7 @@
       (update-in clients [:listeners] dissoc k))))
 
 (defn send-to-client [clients k uid payload]
-  (let [packet {:payload payload :timestamp (timestamp-now)}
+  (let [packet {"payload" payload "timestamp" (timestamp-now)}
         listeners (get-in clients [:listeners k uid])]
     (if (> (count listeners) 0)
       ; if we have listeners send directly

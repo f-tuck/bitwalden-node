@@ -4,6 +4,11 @@ NODE=./deps/node/bin/node
 NODE_VERSION=7.2.0
 NODEENV_VERSION=0.13.6
 
+bitwalden.js: build/bitwalden-server-node.js
+	echo "#!/usr/bin/env node" > $@
+	cat $< $@
+	chmod 755 $@
+
 build/bitwalden-server-node.js: $(CLJS) $(NODE) node_modules node_modules/webtorrent/webtorrent.min.js
 	lein cljsbuild once prod
 

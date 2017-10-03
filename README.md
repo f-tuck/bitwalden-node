@@ -1,6 +1,11 @@
+Bitwalden infrastructure mesh node.
+
+### Quick start
 
 	npm install f-tuck/bitwalden-node
-	./node_modules/.bin/bitwalden.js
+	./node_modules/.bin/bitwalden-node
+
+Then browse to `http://your-server:8923/bw/info` and check the logs in `~/.bitwalden/log/access.log`.
 
 Tested with node `v7.2.0`.
 

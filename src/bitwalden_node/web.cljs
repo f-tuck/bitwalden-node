@@ -59,7 +59,7 @@
     (.use app (.urlencoded body-parser #js {:extended true}))
 
     ; statically serve content (downloaded torrents) dir
-    (.use app "/bw/content" (.static express content-dir))
+    (.use app "/bw/content" ((aget express "static") content-dir))
 
     ; hook up the JSON RPC API
     (.post app "/bw/rpc" (.json body-parser #js {:limit "1mb" :type "*/*" }) (make-json-rpc-server api-atom clients bt content-dir))

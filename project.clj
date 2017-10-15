@@ -17,10 +17,12 @@
   :clean-targets ["target"
                   "build"]
 
+  :figwheel {:server-port 3450}
+
   :cljsbuild {:builds
               [{:id "dev"
                 :source-paths ["src"]
-                :figwheel true
+                :figwheel {:server-port 3450}
                 :compiler {:main bitwalden-node.core
                            :output-to "target/server_dev/bitwalden_node.js"
                            :output-dir "target/server_dev"

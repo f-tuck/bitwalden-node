@@ -27,7 +27,7 @@
           (fn [err torrent-blob]
             (let [pre-torrent (parse-torrent torrent-blob)
                   infoHash (.-infoHash pre-torrent)
-                  torrent (.seed bt content #js {:path (str downloads-dir "/" infoHash :createdBy constants/created-by)}
+                  torrent (.seed bt content #js {:path (str downloads-dir "/" infoHash) :createdBy constants/created-by}
                                  (fn [torrent]
                                    (debug "Seeding" infoHash downloads-dir)
                                    (put! c [nil (.-infoHash torrent)])

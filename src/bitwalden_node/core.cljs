@@ -45,20 +45,19 @@
 
    :dht-get
    (fn [params clients bt]
-     (dht/get-value (.. bt -dht) (get params "infohash")))
+     (dht/get-value (.. bt -dht) (get params "addresshash")))
 
    :dht-put
    (fn [params clients bt]
-     (go (let [result
-               (<! (dht/put-value
-                     (.. bt -dht)
-                     (get params "v")
-                     (get params "k")
-                     (get params "salt")
-                     (get params "seq")
-                     (get params "s.dht")))
-               [err address-hash node-count] result]
-           (if (and (nil? err) address-hash)
+     (go (let [result (<! (dht/put-value
+                            (.. bt -dht)
+                            (get params "v")
+                            (get params "k")
+                            (get params "salt")
+                            (get params "seq")
+                            (get params "s.dht")))]
+           ; queue this dht-put contract up for refresh
+           (if (and (not (result "error")) (result "addresshash"))
              (swap! clients contracts/dht-add (timestamp-now) params))
            result)))
 

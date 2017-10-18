@@ -17,10 +17,10 @@
   (sha1 (js/Buffer.concat #js [(js/Buffer. (bs58.decode k)) (js/Buffer. salt)])))
 
 ; get a value from a DHT address (BEP44)
-(defn get-value [dht infoHash]
+(defn get-value [dht address-hash]
   (go
-    (let [infoHash (js/Buffer. infoHash "hex")
-          [err response] (<! (<<< #(.get dht infoHash %)))
+    (let [address-hash (js/Buffer. address-hash "hex")
+          [err response] (<! (<<< #(.get dht address-hash %)))
           response (js->clj response)
           response (if response
                      {"k" (-> response (get "k") (bs58.encode))
@@ -28,7 +28,9 @@
                       "seq" (-> response (get "seq"))
                       "v" (-> response (get "v") (.toString))
                       "s.dht" (-> response (get "sig") (.toString "hex"))})]
-      [(serialize-error err) response])))
+      (if err
+        (serialize-error err)
+        response))))
 
 ; put a value into the DHT (BEP44)
 (defn put-value [dht value public-key-b58 salt seq-id signature-hex]
@@ -39,7 +41,10 @@
                       ;:cas (- seq-id 1)
                       "v" (js/Buffer. value)
                       "sign" (fn [buf] (js/Buffer. signature-hex "hex"))}
-          [err infoHash put-nodes-count] (<! (<<< #(.put dht (clj->js put-params) %)))
-          infoHash (if infoHash (.toString infoHash "hex"))]
-      [(serialize-error err) infoHash put-nodes-count])))
+          [err address-hash put-nodes-count] (<! (<<< #(.put dht (clj->js put-params) %)))
+          address-hash (if address-hash (.toString address-hash "hex"))]
+      (if err
+        (serialize-error err)
+        {"addresshash" address-hash
+         "nodecount" put-nodes-count}))))
 

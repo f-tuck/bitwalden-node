@@ -30,7 +30,7 @@
                   torrent (.seed bt content #js {:path (str downloads-dir "/" infoHash) :createdBy constants/created-by}
                                  (fn [torrent]
                                    (debug "Seeding" infoHash downloads-dir)
-                                   (put! c [nil (.-infoHash torrent)])
+                                   (put! c {"infohash" (.-infoHash torrent)})
                                    (close! c)))])))))
     c))
 

@@ -37,5 +37,6 @@
 
 (defn serialize-error [e]
   (if e
-    {:code (.. e -code)
-     :message (.. e -message)}))
+    {"error" true
+     "code" (.. e -code)
+     "message" (.. e -message)}))

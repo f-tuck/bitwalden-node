@@ -11,6 +11,3 @@
 (def dht-refresh-interval-ms (* 60 60 1000))
 ; for one month
 (def dht-refresh-count (* 24 31))
-
-; web rpc return codes
-(def authentication-error {:code 401 :message "Authentication failure."})

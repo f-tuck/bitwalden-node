@@ -150,5 +150,6 @@
                    (clj->js)
                    (bencode.encode)
                    (js/Buffer.))]
-    (.verify ed signature packet public-key)))
+    (when (not (.verify ed signature packet public-key))
+      {:error true :code 401 :message "Authentication failure."})))
 

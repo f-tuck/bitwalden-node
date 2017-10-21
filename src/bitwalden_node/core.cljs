@@ -32,65 +32,62 @@
 
    :authenticate
    (fn [params]
-     (web/authenticate params))
+     (or
+       (web/authenticate params)
+       true))
 
    :client-test
    (fn [params clients]
-     (if (web/authenticate params)
-       (do
-         ; wait 3 seconds and pass a value via client queue
-         (go (<! (timeout 3000))
-             (let [[k uid] (web/ids params)]
-               (swap! clients web/send-to-client k uid (get params "p"))))
-         ; immediately ACK
-         (get params "u"))
-       const/authentication-error))
+     (or (web/authenticate params)
+         (do
+           ; wait 3 seconds and pass a value via client queue
+           (go (<! (timeout 3000))
+               (let [[k uid] (web/ids params)]
+                 (swap! clients web/send-to-client k uid (get params "p"))))
+           ; immediately ACK
+           (get params "u"))))
 
    :dht-get
    (fn [params clients bt]
-     (if (web/authenticate params)
-       (dht/get-value (.. bt -dht) (get params "addresshash"))
-       const/authentication-error))
+     (or (web/authenticate params)
+         (dht/get-value (.. bt -dht) (get params "addresshash"))))
 
    :dht-put
    (fn [params clients bt]
-     (if (web/authenticate params)
-       (go (let [result (<! (dht/put-value
-                              (.. bt -dht)
-                              (get params "v")
-                              (get params "k")
-                              (get params "salt")
-                              (get params "seq")
-                              (get params "s.dht")))]
-             ; queue this dht-put contract up for refresh
-             (if (and (not (result "error")) (result "addresshash"))
-               (swap! clients contracts/dht-add (timestamp-now) params))
-             result))
-       const/authentication-error))
+     (or (web/authenticate params)
+         (go (let [result (<! (dht/put-value
+                                (.. bt -dht)
+                                (get params "v")
+                                (get params "k")
+                                (get params "salt")
+                                (get params "seq")
+                                (get params "s.dht")))]
+               ; queue this dht-put contract up for refresh
+               (if (and (not (result "error")) (result "addresshash"))
+                 (swap! clients contracts/dht-add (timestamp-now) params))
+               result))))
 
    :torrent-seed
    (fn [params clients bt content-dir]
-     (if (web/authenticate params)
-       (torrent/seed bt
-                     (get params "name")
-                     (get params "content")
-                     content-dir)
-       const/authentication-error))
+     (or (web/authenticate params)
+         (torrent/seed bt
+                       (get params "name")
+                       (get params "content")
+                       content-dir)))
 
    :torrent-fetch
    (fn [params clients bt content-dir]
-     (if (web/authenticate params)
-       (let [[k uid] (web/ids params)
-             retrieval-chan (torrent/add bt (get params "infohash") content-dir)]
-         (go
-           (loop []
-             (let [download-update (<! retrieval-chan)]
-               (when download-update
-                 (swap! clients web/send-to-client k uid download-update)
-                 (if (not= (get download-update "download") "done")
-                   (recur))))))
-         (get params "u"))
-       const/authentication-error))
+     (or (web/authenticate params)
+         (let [[k uid] (web/ids params)
+               retrieval-chan (torrent/add bt (get params "infohash") content-dir)]
+           (go
+             (loop []
+               (let [download-update (<! retrieval-chan)]
+                 (when download-update
+                   (swap! clients web/send-to-client k uid download-update)
+                   (if (not= (get download-update "download") "done")
+                     (recur))))))
+           (get params "u"))))
 
    :channel-send
    (fn [params clients bt content-dir])
@@ -103,19 +100,18 @@
 
    :get-queue
    (fn [params clients]
-     (if (web/authenticate params)
-       (go (let [[k uid] (web/ids params)
-                 c (chan)
-                 channel-timeout (or (get params "timeout") const/channel-timeout-max)]
-             (swap! clients web/add-queue-listener k uid c (get params "after"))
-             ; timeout and close the chan after 5 minutes max to clean up
-             (go (<! (timeout (js/Math.min channel-timeout const/channel-timeout-max)))
-                 (close! c))
-             (let [response (<! c)]
-               (swap! clients web/remove-queue-listener k uid c)
-               ; return valid empty queue if there was no response
-               (or response []))))
-       const/authentication-error))})
+     (or (web/authenticate params)
+         (go (let [[k uid] (web/ids params)
+                   c (chan)
+                   channel-timeout (or (get params "timeout") const/channel-timeout-max)]
+               (swap! clients web/add-queue-listener k uid c (get params "after"))
+               ; timeout and close the chan after 5 minutes max to clean up
+               (go (<! (timeout (js/Math.min channel-timeout const/channel-timeout-max)))
+                   (close! c))
+               (let [response (<! c)]
+                 (swap! clients web/remove-queue-listener k uid c)
+                 ; return valid empty queue if there was no response
+                 (or response []))))))})
 
 ; hack for reloadable code
 (reset! api-atom api)

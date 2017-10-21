@@ -7,6 +7,7 @@
             [bitwalden-node.pool :as pool]
             [bitwalden-node.constants :as const]
             [bitwalden-node.contracts :as contracts]
+            [bitwalden-node.validation :as validation]
             [cljs.nodejs :as nodejs]
             [cljs.core.async :refer [<! put! chan timeout alts! close!]])
   (:require-macros [cljs.core.async.macros :refer [go go-loop]]))
@@ -39,29 +40,40 @@
    :client-test
    (fn [params clients]
      (or (web/authenticate params)
+         (validation/check params
+                           {"u" [:exists? :string? :max1k?]
+                            "p" [:exists? :string? :max1k?]})
          (do
            ; wait 3 seconds and pass a value via client queue
            (go (<! (timeout 3000))
-               (let [[k uid] (web/ids params)]
-                 (swap! clients web/send-to-client k uid (get params "p"))))
+               (let [k (params "k")
+                     uid (params "u")]
+                 (swap! clients web/send-to-client k uid (params "p"))))
            ; immediately ACK
-           (get params "u"))))
+           (params "u"))))
 
    :dht-get
    (fn [params clients bt]
      (or (web/authenticate params)
-         (dht/get-value (.. bt -dht) (get params "addresshash"))))
+         (validation/check params
+                           {"addresshash" [:exists? :hex-sha1?]})
+         (dht/get-value (.. bt -dht) (params "addresshash"))))
 
    :dht-put
    (fn [params clients bt]
      (or (web/authenticate params)
+         (validation/check params
+                           {"v" [:exists? :string? :max1k?]
+                            "seq" [:exists? :int?]
+                            "salt" [:exists? :string? :max1k?]
+                            "s.dht" [:exists? :hex-signature?]})
          (go (let [result (<! (dht/put-value
                                 (.. bt -dht)
-                                (get params "v")
-                                (get params "k")
-                                (get params "salt")
-                                (get params "seq")
-                                (get params "s.dht")))]
+                                (params "v")
+                                (params "k")
+                                (params "salt")
+                                (params "seq")
+                                (params "s.dht")))]
                ; queue this dht-put contract up for refresh
                (if (and (not (result "error")) (result "addresshash"))
                  (swap! clients contracts/dht-add (timestamp-now) params))
@@ -70,22 +82,29 @@
    :torrent-seed
    (fn [params clients bt content-dir]
      (or (web/authenticate params)
+         (validation/check params
+                           {"name" [:exists? :string?]
+                            "content" [:exists? :string?]})
          (torrent/seed bt
-                       (get params "name")
-                       (get params "content")
+                       (params "name")
+                       (params "content")
                        content-dir)))
 
    :torrent-fetch
    (fn [params clients bt content-dir]
      (or (web/authenticate params)
-         (let [[k uid] (web/ids params)
-               retrieval-chan (torrent/add bt (get params "infohash") content-dir)]
+         (validation/check params
+                           {"u" [:exists? :string? :max1k?]
+                            "infohash" [:exists? :hex-sha1?]})
+         (let [k (params "k")
+               uid (params "u")
+               retrieval-chan (torrent/add bt (params "infohash") content-dir)]
            (go
              (loop []
                (let [download-update (<! retrieval-chan)]
                  (when download-update
                    (swap! clients web/send-to-client k uid download-update)
-                   (if (not= (get download-update "download") "done")
+                   (if (not= (download-update "download") "done")
                      (recur))))))
            (get params "u"))))
 
@@ -101,10 +120,13 @@
    :get-queue
    (fn [params clients]
      (or (web/authenticate params)
-         (go (let [[k uid] (web/ids params)
+         (validation/check params
+                           {"u" [:exists? :string? :max1k?]})
+         (go (let [k (params "k")
+                   uid (params "u")
                    c (chan)
-                   channel-timeout (or (get params "timeout") const/channel-timeout-max)]
-               (swap! clients web/add-queue-listener k uid c (get params "after"))
+                   channel-timeout (or (params "timeout") const/channel-timeout-max)]
+               (swap! clients web/add-queue-listener k uid c (params "after"))
                ; timeout and close the chan after 5 minutes max to clean up
                (go (<! (timeout (js/Math.min channel-timeout const/channel-timeout-max)))
                    (close! c))

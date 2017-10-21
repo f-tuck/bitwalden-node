@@ -2,6 +2,7 @@
   (:require [bitwalden-node.utils :refer [<<< to-json buf-hex timestamp-now pr-thru]]
             [bitwalden-node.constants :as const]
             [bitwalden-node.config :as config]
+            [bitwalden-node.validation :as validation]
             [cljs.nodejs :as nodejs]
             [cljs.core.async :refer [<! put! timeout chan sliding-buffer close! mult tap untap]])
   (:require-macros [cljs.core.async.macros :refer [go go-loop]]))
@@ -79,9 +80,6 @@
 
     {:server app :port const/web-api-port :requests-chan requests-chan}))
 
-(defn ids [params]
-  [(get params "k") (get params "u")])
-
 (defn get-pending-messages [q after]
   (vec (filter #(> (% "timestamp") after) q)))
 
@@ -138,18 +136,22 @@
       (update-in clients [:queues k uid] (fnil conj []) packet))))
 
 (defn authenticate [params]
-  (let [public-key (-> params
-                       (get "k")
-                       (bs58.decode)
-                       (js/Buffer.))
-        signature (-> params
-                      (get "s")
-                      (js/Buffer. "hex"))
-        packet (-> params
-                   (dissoc "s")
-                   (clj->js)
-                   (bencode.encode)
-                   (js/Buffer.))]
-    (when (not (.verify ed signature packet public-key))
-      {:error true :code 401 :message "Authentication failure."})))
+  (or
+    (validation/check params
+                      {"k" [:exists? :base58-key?]
+                       "s" [:exists? :hex-signature?]})
+    (let [public-key (-> params
+                         (get "k")
+                         (bs58.decode)
+                         (js/Buffer.))
+          signature (-> params
+                        (get "s")
+                        (js/Buffer. "hex"))
+          packet (-> params
+                     (dissoc "s")
+                     (clj->js)
+                     (bencode.encode)
+                     (js/Buffer.))]
+      (when (not (.verify ed signature packet public-key))
+        {:error true :code 401 :message "Authentication failure."}))))
 

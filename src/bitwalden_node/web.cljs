@@ -143,7 +143,8 @@
                        (bs58.decode)
                        (js/Buffer.))
         signature (-> params
-                      (get "s"))
+                      (get "s")
+                      (js/Buffer. "hex"))
         packet (-> params
                    (dissoc "s")
                    (clj->js)

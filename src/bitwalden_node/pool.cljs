@@ -10,14 +10,18 @@
 (defonce wt (nodejs/require "webtorrent"))
 (defonce bencode (nodejs/require "bencode"))
 (defonce url-exists (nodejs/require "url-exists"))
+(defonce ip-range-check (nodejs/require "range_check"))
 
 (def EXT "bw_pool")
+(def check-path "/bw/info")
 
 (defn split-address [addr]
   (let [last-colon-index (.lastIndexOf addr ":")
         ip (.slice addr 0 last-colon-index)
-        ip (if (> (.-length (.split ip ":")) 1) (str "[" ip "]") ip) ; convert ipv6
+        ip (.storeIP ip-range-check ip)
+        ip (if (.isV6 ip-range-check ip) (str "[" ip "]") ip) ; convert ipv6 URLs
         port (.slice addr (+ last-colon-index 1))]
+    (debug "split-address" addr ip port)
     [ip port]))
 
 (defn receive-message [wire message]
@@ -38,14 +42,15 @@
       ; if they only sent a port then use the IP address
       (let [public-url (if (= (.indexOf url ":") 0)
                          (str "http://" ip url)
-                         url)]
+                         url)
+            check-url (str public-url check-path)]
         (debug "pool peer" public-url)
         ; try to connect to their web API and if it works then
         ; add to the peer list
         (url-exists
-          (str public-url "/sw/info")
+          check-url
           (fn [err exists]
-            (debug "url-exists test" public-url err exists)
+            (debug "url-exists test" check-url err exists)
             (if (and (not err) exists)
               (do
                 (reset! their-url public-url)

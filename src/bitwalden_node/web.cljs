@@ -69,7 +69,7 @@
     (.use app (fn [req res cb]
                 (let [path (.. req -path)
                       call (or (get @web-api-atom path) (get @web-api-atom (str path "/")))]
-                  (if (and call (= (.. req -method) "GET"))
+                  (if (and call (or (= (.. req -method) "GET") (= (.. req -method) "HEAD")))
                     (do
                       (write-header res 200)
                       (.end res (to-json (call public-peers))))

@@ -56,6 +56,6 @@
   (some (fn [[k checks]]
           (some
             (fn [f] (let [msg ((check-fns f) params k)]
-                      (when msg (str "Parameter '" k "' " msg))))
+                      (when msg {:error true :code 400 :message (str "Parameter '" k "' " msg)})))
             checks))
         param-checks))

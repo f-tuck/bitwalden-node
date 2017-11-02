@@ -22,7 +22,7 @@
 (defn make-exit-fn [atoms-to-store]
   (fn [options err]
     (if (:cleanup options) (debug "Cleaning up."))
-    (if err (.log js/console (.-stack err)))
+    (if err (and (.-stack err)) (.log js/console (.-stack err)))
     (when (:exit options) (debug "Exiting") (.exit js/process))
     (doseq [[filename data-atom lookup] atoms-to-store]
       (do

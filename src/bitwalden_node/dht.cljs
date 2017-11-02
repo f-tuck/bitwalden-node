@@ -11,20 +11,20 @@
 (defonce DHT (nodejs/require "bittorrent-dht"))
 (defonce bs58 (nodejs/require "bs58"))
 (defonce bencode (nodejs/require "bencode"))
+(defonce ed (nodejs/require "ed25519-supercop"))
 
 ; compute a dht address hash
 (defn address [k salt]
   (sha1 (js/Buffer.concat #js [(js/Buffer. (bs58.decode k)) (js/Buffer. salt)])))
 
 ; get a value from a DHT address (BEP44)
-(defn get-value [dht address-hash]
+(defn get-value [dht address-hash salt]
   (go
     (let [address-hash (js/Buffer. address-hash "hex")
-          [err response] (<! (<<< #(.get dht address-hash %)))
+          [err response] (<! (<<< #(.get dht address-hash (clj->js {:salt salt :verify (.-verify ed) :nocache true}) %)))
           response (js->clj response)
           response (if response
                      {"k" (-> response (get "k") (bs58.encode))
-                      "salt" (-> response (get "salt") (.toString))
                       "seq" (-> response (get "seq"))
                       "v" (-> response (get "v") (.toString))
                       "s.dht" (-> response (get "sig") (.toString "hex"))})]

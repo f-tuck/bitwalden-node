@@ -57,7 +57,7 @@
      (or (web/authenticate params)
          (validation/check params
                            {"addresshash" [:exists? :hex-sha1?]})
-         (dht/get-value (.. bt -dht) (params "addresshash"))))
+         (dht/get-value (.. bt -dht) (params "addresshash") (params "salt"))))
 
    :dht-put
    (fn [params clients bt]

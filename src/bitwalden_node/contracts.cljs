@@ -44,22 +44,25 @@
             results []]
            (if (> (count contracts) 0)
              (let [[k salt contract remaining] (first contracts)
+                   put-params (contract "put-params")
                    address (dht/address k salt)
-                   [err updated] (<! (dht/get-value (.. bt -dht) (dht/address k salt)))]
-               (if updated
-                 (let [[err put-address node-count]
-                       (<! (dht/put-value
-                             (.. bt -dht)
-                             (get updated "v")
-                             (get updated "k")
-                             (get updated "salt")
-                             (get updated "seq")
-                             (get updated "s.dht")))]
-                   (debug "dht-refresh contract put" put-address node-count)))
+                   get-result (<! (dht/get-value (.. bt -dht) (dht/address k salt) salt))
+                   put-params (if (and get-result (not (get-result "error")) (> (get-result "seq") (put-params "seq"))) (assoc get-result "salt" salt) put-params)
+                   success-count (if put-params
+                                   (let [put-result
+                                         (<! (dht/put-value
+                                               (.. bt -dht)
+                                               (put-params "v")
+                                               (put-params "k")
+                                               (put-params "salt")
+                                               (put-params "seq")
+                                               (put-params "s.dht")))]
+                                     (debug "dht-refresh contract put" (put-result "addresshash") (put-result "nodecount"))
+                                     (put-result "nodecount")))]
                (recur 
                  (rest contracts)
-                 (if updated
-                   (conj results [k salt updated (dec remaining)])
+                 (if (and success-count (> success-count 0))
+                   (conj results [k salt put-params (dec remaining)])
                    results)))
              results)))
 

@@ -6,7 +6,7 @@
 (nodejs/enable-util-print!)
 
 ; nodejs requirements
-(defonce debug ((nodejs/require "debug") "pool"))
+(defonce debug ((nodejs/require "debug") "bitwalden-node.pool"))
 (defonce wt (nodejs/require "webtorrent"))
 (defonce bencode (nodejs/require "bencode"))
 (defonce url-exists (nodejs/require "url-exists"))

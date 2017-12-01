@@ -9,7 +9,7 @@ bitwalden.js: build/bitwalden-server-node.js
 	cat $< > $@
 	chmod 755 $@
 
-build/bitwalden-server-node.js: $(CLJS) $(NODE) node_modules node_modules/webtorrent/webtorrent.min.js
+build/bitwalden-server-node.js: $(CLJS) $(NODE) node_modules node_modules/webtorrent/webtorrent.min.js package.json project.clj
 	lein cljsbuild once prod
 
 .PHONY: clean

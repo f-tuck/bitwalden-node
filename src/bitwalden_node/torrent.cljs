@@ -2,17 +2,18 @@
   (:require [cljs.nodejs :as nodejs]
             [cljs.core.async :refer [chan put! <! close! timeout]]
             [bitwalden-node.utils :refer [buf-hex <<<]]
-            [bitwalden-node.constants :as constants])
+            [bitwalden-node.constants :as constants]
+            ["webtorrent" :as wt]
+            ["create-torrent" :as create-torrent]
+            ["parse-torrent" :as parse-torrent]
+            ["bencode/lib" :as bencode]
+            ["debug/node" :as debug-fn])
   (:require-macros [cljs.core.async.macros :refer [go go-loop]]))
 
 (nodejs/enable-util-print!)
 
 ; nodejs requirements
-(defonce debug ((nodejs/require "debug") "bitwalden-node.bittorrent"))
-(defonce wt (nodejs/require "webtorrent"))
-(defonce bencode (nodejs/require "bencode"))
-(defonce create-torrent (nodejs/require "create-torrent"))
-(defonce parse-torrent (nodejs/require "parse-torrent"))
+(defonce debug (debug-fn "bitwalden-node.bittorrent"))
 
 ; seed some content as well as listening out for gossip messages
 (defn seed [bt content-name contents downloads-dir]

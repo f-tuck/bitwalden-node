@@ -1,21 +1,22 @@
 (ns bitwalden-node.dht
   (:require [bitwalden-node.utils :refer [<<< buffer serialize-error sha1]]
             [cljs.nodejs :as nodejs]
-            [cljs.core.async :refer [<! timeout chan close! put!]])
+            [cljs.core.async :refer [<! timeout chan close! put!]]
+            ["bittorrent-dht" :as DHT]
+            ["bs58" :as bs58]
+            ["tweetnacl" :as nacl]
+            ["bencode/lib" :as bencode]
+            ["debug/node" :as debug-fn])
   (:require-macros [cljs.core.async.macros :refer [go go-loop]]))
 
 (nodejs/enable-util-print!)
 
 ; nodejs requirements
-(defonce debug ((nodejs/require "debug") "bitwalden-node.dht"))
-(defonce DHT (nodejs/require "bittorrent-dht"))
-(defonce bs58 (nodejs/require "bs58"))
-(defonce bencode (nodejs/require "bencode"))
-(defonce nacl (nodejs/require "tweetnacl"))
+(defonce debug (debug-fn "bitwalden-node.dht"))
 
 ; compute a dht address hash
 (defn address [k salt]
-  (sha1 (js/Buffer.concat #js [(js/Buffer. (bs58.decode k)) (js/Buffer. salt)])))
+  (sha1 (js/Buffer.concat #js [(js/Buffer. (bs58/decode k)) (js/Buffer. salt)])))
 
 ; get a value from a DHT address (BEP44)
 (defn get-value [dht address-hash salt]
@@ -26,7 +27,7 @@
                                                                     :nocache true}) %)))
           response (js->clj response)
           response (if response
-                     {"k" (-> response (get "k") (bs58.encode))
+                     {"k" (-> response (get "k") (bs58/encode))
                       "seq" (-> response (get "seq"))
                       "v" (-> response (get "v") (.toString))
                       "s.dht" (-> response (get "sig") (.toString "hex"))})]
@@ -37,7 +38,7 @@
 ; put a value into the DHT (BEP44)
 (defn put-value [dht value public-key-b58 salt seq-id signature-hex]
   (go
-    (let [put-params {"k" (-> public-key-b58 (bs58.decode) (js/Buffer.))
+    (let [put-params {"k" (-> public-key-b58 (bs58/decode) (js/Buffer.))
                       "salt" (js/Buffer. salt)
                       "seq" seq-id
                       ;:cas (- seq-id 1)

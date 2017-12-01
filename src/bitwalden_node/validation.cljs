@@ -1,7 +1,6 @@
 (ns bitwalden-node.validation
-  (:require [cljs.nodejs :as nodejs]))
-
-(defonce bs58 (nodejs/require "bs58"))
+  (:require [cljs.nodejs :as nodejs]
+            ["bs58" :as bs58]))
 
 (def check-fns {:exists?
              (fn [p n] 
@@ -10,7 +9,7 @@
 
              :base58-key?
              (fn [p n]
-               (let [k (try (bs58.decode (p n)) (catch :default e nil))]
+               (let [k (try (bs58/decode (p n)) (catch :default e nil))]
                  (cond (nil? k)
                        "must be base58 encoded."
                        (not= (.-length k) 32)

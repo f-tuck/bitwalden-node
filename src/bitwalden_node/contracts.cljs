@@ -3,10 +3,11 @@
             [bitwalden-node.dht :as dht]
             [bitwalden-node.constants :as const]
             [cljs.nodejs :as nodejs]
-            [cljs.core.async :as async :refer [<! chan put!]])
+            [cljs.core.async :as async :refer [<! chan put!]]
+            ["debug/node" :as debug-fn])
   (:require-macros [cljs.core.async.macros :refer [go go-loop]]))
 
-(defonce debug ((nodejs/require "debug") "bitwalden-node.contracts"))
+(defonce debug (debug-fn "bitwalden-node.contracts"))
 
 (defn dht-add [clients timestamp dht-put-params & [remaining]]
   (let [remaining (or remaining const/dht-refresh-count)]

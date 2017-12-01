@@ -1,10 +1,11 @@
 (ns bitwalden-node.config
-  (:require [cljs.nodejs :as nodejs]))
+  (:require [cljs.nodejs :as nodejs]
+            ["mkdirp" :as mkdirp]
+            ["debug/node" :as debug-fn]))
 
-(defonce debug ((nodejs/require "debug") "bitwalden-node.config"))
+(defonce debug (debug-fn "bitwalden-node.config"))
 (defonce os (nodejs/require "os"))
 (defonce fs (nodejs/require "fs"))
-(defonce mkdirp (nodejs/require "mkdirp"))
 (defonce process (nodejs/require "process"))
 
 (defn ensure-dir [d]
@@ -22,8 +23,11 @@
 (defn make-exit-fn [atoms-to-store]
   (fn [options err]
     (if (:cleanup options) (debug "Cleaning up."))
-    (if err (and (.-stack err)) (.log js/console (.-stack err)))
-    (when (:exit options) (debug "Exiting") (.exit js/process))
+    (when err
+      (if (.-stack err)
+        (js/console.error (.-stack err))
+        (js/console.error err)))
+    (when (:exit options) (debug "Exiting") (.exit process))
     (doseq [[filename data-atom lookup] atoms-to-store]
       (do
         (debug "Writing" filename)
@@ -40,11 +44,11 @@
   (let [exit-fn (make-exit-fn atoms-to-store)]
     ; https://stackoverflow.com/a/14032965
     ; do something when app is closing
-    (.on js/process "exit" (.bind exit-fn nil {:cleanup true}))
+    (.on process "exit" (.bind exit-fn nil {:cleanup true}))
     ; catches ctrl+c event
-    (.on js/process "SIGINT" (.bind exit-fn nil {:exit true}))
+    (.on process "SIGINT" (.bind exit-fn nil {:exit true}))
     ; catches uncaught exceptions
-    (.on js/process "uncaughtException" (.bind exit-fn nil {:exit true}))))
+    (.on process "uncaughtException" (.bind exit-fn nil {:exit true}))))
 
 (defn get-or-set! [configuration k default]
   (or (@configuration k) (swap! configuration assoc k default)))

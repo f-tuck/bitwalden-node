@@ -4,12 +4,12 @@
 
   :min-lein-version "2.5.3"
 
-  :dependencies [[org.clojure/clojure "1.7.0"]
-                 [org.clojure/clojurescript "1.7.170"]
-                 [org.clojure/core.async "0.2.374"]]
+  :dependencies [[org.clojure/clojure "1.8.0"]
+                 [org.clojure/clojurescript "1.9.854"]
+                 [org.clojure/core.async "0.3.465"]]
 
-  :plugins [[lein-cljsbuild "1.1.1"]
-            [lein-figwheel "0.5.0-2"]]
+  :plugins [[lein-cljsbuild "1.1.5"]
+            [lein-figwheel "0.5.14"]]
   
   :source-paths ["src"]
   :test-paths ["test"]
@@ -22,13 +22,13 @@
   :cljsbuild {:builds
               [{:id "dev"
                 :source-paths ["src"]
-                :figwheel {:server-port 3450}
                 :compiler {:main bitwalden-node.core
                            :output-to "target/server_dev/bitwalden_node.js"
                            :output-dir "target/server_dev"
                            :target :nodejs
                            :optimizations :none
-                           :source-map true}}
+                           :source-map true}
+                :figwheel true}
                {:id "prod"
                 :source-paths ["src"]
                 :compiler {:output-to "build/bitwalden-server-node.js"

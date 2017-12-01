@@ -9,14 +9,15 @@
             [bitwalden-node.contracts :as contracts]
             [bitwalden-node.validation :as validation]
             [cljs.nodejs :as nodejs]
-            [cljs.core.async :refer [<! put! chan timeout alts! close!]])
+            [cljs.core.async :refer [<! put! chan timeout alts! close!]]
+            ["webtorrent" :as wt]
+            ["debug/node" :as debug-fn])
   (:require-macros [cljs.core.async.macros :refer [go go-loop]]))
 
 ; nodejs requirements
-(.install (nodejs/require "source-map-support"))
-(defonce debug ((nodejs/require "debug") "bitwalden-node.core"))
+; (.install source-map-support)
+(defonce debug (debug-fn "bitwalden-node.core"))
 (defonce crypto (nodejs/require "crypto"))
-(defonce wt (nodejs/require "webtorrent"))
 
 (nodejs/enable-util-print!)
 

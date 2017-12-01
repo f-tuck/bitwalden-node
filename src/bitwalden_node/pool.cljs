@@ -1,16 +1,17 @@
 (ns bitwalden-node.pool
   (:require [cljs.nodejs :as nodejs]
             [cljs.core.async :refer [chan put! <! close! timeout]]
-            [bitwalden-node.utils :refer [buf-hex <<<]]))
+            [bitwalden-node.utils :refer [buf-hex <<<]]
+            ["url-exists" :as url-exists]
+            ["range_check" :as ip-range-check]
+            ["webtorrent" :as wt]
+            ["bencode/lib" :as bencode]
+            ["debug/node" :as debug-fn]))
 
 (nodejs/enable-util-print!)
 
 ; nodejs requirements
-(defonce debug ((nodejs/require "debug") "bitwalden-node.pool"))
-(defonce wt (nodejs/require "webtorrent"))
-(defonce bencode (nodejs/require "bencode"))
-(defonce url-exists (nodejs/require "url-exists"))
-(defonce ip-range-check (nodejs/require "range_check"))
+(defonce debug (debug-fn "bitwalden-node.pool"))
 
 (def EXT "bw_pool")
 (def check-path "/bw/info")

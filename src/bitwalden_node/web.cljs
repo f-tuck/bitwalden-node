@@ -4,24 +4,24 @@
             [bitwalden-node.config :as config]
             [bitwalden-node.validation :as validation]
             [cljs.nodejs :as nodejs]
-            [cljs.core.async :refer [<! put! timeout chan sliding-buffer close! mult tap untap]])
+            [cljs.core.async :refer [<! put! timeout chan sliding-buffer close! mult tap untap]]
+            ["body-parser" :as body-parser]
+            ["jayson" :as jayson]
+            ["morgan" :as morgan]
+            ["rotating-file-stream" :as rotating-file-stream]
+            ["express" :as express]
+            ["url" :as url]
+            ["tweetnacl" :as nacl]
+            ["bs58" :as bs58]
+            ["bencode/lib" :as bencode]
+            ["debug/node" :as debug-fn])
   (:require-macros [cljs.core.async.macros :refer [go go-loop]]))
 
 (nodejs/enable-util-print!)
 
 ; nodejs requirements
 (defonce crypto (nodejs/require "crypto"))
-(defonce debug ((nodejs/require "debug") "bitwalden-node.web"))
-(defonce express (nodejs/require "express"))
-(defonce url (nodejs/require "url"))
-(defonce cookie (nodejs/require "cookie-parser"))
-(defonce body-parser (nodejs/require "body-parser"))
-(defonce nacl (nodejs/require "tweetnacl"))
-(defonce bs58 (nodejs/require "bs58"))
-(defonce bencode (nodejs/require "bencode"))
-(defonce jayson (nodejs/require "jayson"))
-(defonce morgan (nodejs/require "morgan"))
-(defonce rotating-file-stream (nodejs/require "rotating-file-stream"))
+(defonce debug (debug-fn "bitwalden-node.web"))
 
 (defn write-header [res code & [headers]]
   (.writeHead res code (clj->js (merge {"Content-Type" "application/json"} headers))))
@@ -142,7 +142,7 @@
                        "s" [:exists? :hex-signature?]})
     (let [public-key (-> params
                          (get "k")
-                         (bs58.decode)
+                         (bs58/decode)
                          (js/Buffer.))
           signature (-> params
                         (get "s")
@@ -150,7 +150,7 @@
           packet (-> params
                      (dissoc "s")
                      (clj->js)
-                     (bencode.encode)
+                     (bencode/encode)
                      (js/Buffer.))]
       (when (not (.verify (.. nacl -sign -detached) packet signature public-key))
         {:error true :code 401 :message "Authentication failure."}))))

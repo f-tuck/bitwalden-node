@@ -16,7 +16,7 @@
 (defonce url (nodejs/require "url"))
 (defonce cookie (nodejs/require "cookie-parser"))
 (defonce body-parser (nodejs/require "body-parser"))
-(defonce ed (nodejs/require "ed25519-supercop"))
+(defonce nacl (nodejs/require "tweetnacl"))
 (defonce bs58 (nodejs/require "bs58"))
 (defonce bencode (nodejs/require "bencode"))
 (defonce jayson (nodejs/require "jayson"))
@@ -152,6 +152,6 @@
                      (clj->js)
                      (bencode.encode)
                      (js/Buffer.))]
-      (when (not (.verify ed signature packet public-key))
+      (when (not (.verify (.. nacl -sign -detached) packet signature public-key))
         {:error true :code 401 :message "Authentication failure."}))))
 

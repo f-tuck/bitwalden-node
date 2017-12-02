@@ -6,7 +6,7 @@ NODEENV_VERSION=0.13.6
 
 bitwalden.js: build/bitwalden-server-node.js
 	echo "#!/usr/bin/env node" > $@
-	browserify --node $< > $@
+	./node_modules/.bin/browserify --node $< | sed -e "s+`pwd`++" | ./node_modules/.bin/uglifyjs > $@
 	chmod 755 $@
 
 build/bitwalden-server-node.js: $(CLJS) $(NODE) node_modules node_modules/webtorrent/webtorrent.min.js package.json project.clj

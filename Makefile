@@ -4,6 +4,9 @@ NODE=./deps/node/bin/node
 NODE_VERSION=7.2.0
 NODEENV_VERSION=0.13.6
 
+bitwalden-daemon: bitwalden.js
+	./bin/make-binary.sh
+
 bitwalden.js: build/bitwalden-server-node.js
 	echo "#!/usr/bin/env node" > $@
 	./node_modules/.bin/browserify --node $< | sed -e "s+`pwd`++" | ./node_modules/.bin/uglifyjs > $@

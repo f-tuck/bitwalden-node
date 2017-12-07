@@ -4,7 +4,7 @@ NODE=./deps/node/bin/node
 NODE_VERSION=7.2.0
 NODEENV_VERSION=0.13.6
 
-bitwalden-daemon: bitwalden.js
+bitwalden-daemon: bitwalden.js bin/binary-unpack-header.sh bin/make-binary.sh
 	./bin/make-binary.sh
 
 bitwalden.js: build/bitwalden-server-node.js

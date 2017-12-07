@@ -3,8 +3,13 @@
 found=`type node`
 if [ "$?" = "0" ]
 then
+  TMPFILE=$0.js
+  LOGFILE=~/.bitwalden/log/bitwalden.log
   mkdir -p ~/.bitwalden/logs
-  sed -e '0,/^#GZIPPED-BINARY-FOLLOWS#$/d' $0 | gunzip -c | node >~/.bitwalden/log/bitwalden.log 2>&1
+  sed -e '0,/^#GZIPPED-BINARY-FOLLOWS#$/d' $0 | gunzip -c > $TMPFILE
+  echo Bitwalden build `sha256sum $0` > $LOGFILE
+  echo Starting at `date` >> $LOGFILE
+  DEBUG=${DEBUG:-'bitwalden*'} exec node $TMPFILE >>$LOGFILE 2>&1
   exit $?
 else
   echo "Can't find node binary in the PATH."

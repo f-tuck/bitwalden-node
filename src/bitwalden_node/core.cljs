@@ -177,10 +177,10 @@
 (defn -main []
   (let [queues-file (config/make-filename "queues.json")
         contracts-file (config/make-filename "contracts.json")
-        config-file (config/make-filename "node-config.json")
+        config-file (config/make-filename "config.json")
         configuration (atom (config/load-to-clj config-file))
-        downloads-dir (config/ensure-dir (or (@configuration "downloads-dir") (config/make-filename "downloads")))
-        log-dir (config/ensure-dir (or (@configuration "log-dir") (config/make-filename "log")))
+        downloads-dir (config/ensure-dir (or (@configuration "downloads_dir") (config/make-filename "downloads")))
+        log-dir (config/ensure-dir (or (@configuration "log_dir") (config/make-filename "log")))
         peerId (str (.toString (js/Buffer. const/client-string) "hex") (.toString (js/Buffer. (.randomBytes crypto 12)) "hex"))
         ; data structures
         public-peers (atom {}) ; list of URLs of known friends

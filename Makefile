@@ -4,12 +4,18 @@ NODE=./deps/node/bin/node
 NODE_VERSION=7.2.0
 NODEENV_VERSION=0.13.6
 
-bitwalden-daemon: bitwalden.js bin/binary-unpack-header.sh bin/make-binary.sh
+all: bitwalden.js bitwalden-daemon
+
+bitwalden-daemon: bitwalden-bundled.js bin/binary-unpack-header.sh bin/make-binary.sh
 	./bin/make-binary.sh
 
-bitwalden.js: build/bitwalden-server-node.js
+bitwalden-bundled.js: build/bitwalden-server-node.js
 	echo "#!/usr/bin/env node" > $@
 	./node_modules/.bin/browserify --node $< | sed -e "s+`pwd`++" | ./node_modules/.bin/uglifyjs > $@
+	chmod 755 $@
+
+bitwalden.js: build/bitwalden-server-node.js
+	cp $< $@
 	chmod 755 $@
 
 build/bitwalden-server-node.js: $(CLJS) $(NODE) node_modules node_modules/webtorrent/webtorrent.min.js package.json project.clj
@@ -31,4 +37,5 @@ node_modules/webtorrent/webtorrent.min.js: node_modules
 
 clean:
 	lein clean
+	rm -rf bitwalden-daemon bitwalden.js bitwalden-bundled.js
 	rm -rf node_modules deps build

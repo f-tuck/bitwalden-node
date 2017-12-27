@@ -103,11 +103,15 @@
                retrieval-chan (torrent/add bt (params "infohash") content-dir)]
            (go
              (loop []
-               (let [download-update (<! retrieval-chan)]
-                 (when download-update
-                   (swap! clients web/send-to-client k uid download-update)
-                   (if (not= (download-update "download") "done")
-                     (recur))))))
+               (let [[download-update c] (alts! [retrieval-chan (timeout (* 5 60 1000))])]
+                 (if download-update
+                   (do
+                     (swap! clients web/send-to-client k uid download-update)
+                     (if (not= (download-update "download") "done")
+                       (recur)))
+                   (if (not= c retrieval-chan)
+                     (swap! clients web/send-to-client k uid {"error" true "message" "Torrent fetch failed." "code" "404" "download" "failed"})
+                     (print "Torrent fetch closing down."))))))
            (get params "u"))))
 
    :channel-send

@@ -202,7 +202,17 @@
     (config/install-exit-handler
       [[queues-file clients [:queues]]
        [contracts-file clients [:contracts]]])
-    
+
+    ; seed torrents from the file system
+    ; TODO: only seed those where a non-expired contract exists
+    (go
+      (let [torrents-on-disk (<! (torrent/get-disk-torrent-list downloads-dir))]
+        (doseq [i torrents-on-disk]
+          (let [path (str downloads-dir "/" i)
+                torrent-files (<! (torrent/get-torrent-file-list path))]
+            (when (> (count torrent-files) 0)
+              (torrent/re-seed bt i torrent-files path))))))
+
     ; thread that runs every minute and updates refresher contracts
     (go-loop []
              ; TODO: rather than run every minute schedule based on queue contents

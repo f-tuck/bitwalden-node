@@ -7,7 +7,8 @@
             ["create-torrent" :as create-torrent]
             ["parse-torrent" :as parse-torrent]
             ["bencode/lib" :as bencode]
-            ["debug/node" :as debug-fn])
+            ["debug/node" :as debug-fn]
+            ["fs" :as fs])
   (:require-macros [cljs.core.async.macros :refer [go go-loop]]))
 
 (nodejs/enable-util-print!)
@@ -59,3 +60,29 @@
                           (close! c))))))))))
     c))
 
+; re-seed a torrent we have on disk already
+(defn re-seed [bt infohash torrent-files path]
+  (debug "Re-seeding" infohash)
+  (<<< #(.seed bt (clj->js torrent-files) #js {:path path})))
+
+; get a list of torrent hash directories from the downloads directory
+(defn get-disk-torrent-list [downloads-dir]
+  (let [c (chan)]
+    (go
+      (.readdir fs downloads-dir
+                (fn [err files]
+                  (put! c (filter #(re-find constants/re-sha1 %) files)))))
+    c))
+
+; check if there are a set of files in a certain torrent path
+(defn get-torrent-file-list [torrent-path]
+  (let [c (chan)]
+    (go
+      (.readdir fs torrent-path
+                (fn [err files]
+                  (put! c (map #(str torrent-path "/" %) files)))))
+    c))
+
+; set of currently active torrent hashes
+(defn get-current-torrent-hashes [bt]
+  (set (map #(aget % "infoHash") (.-torrents bt))))

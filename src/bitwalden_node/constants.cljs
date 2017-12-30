@@ -7,6 +7,8 @@
 (def channel-timeout-max (* 60 5 1000))
 (def created-by (str "Bitwalden/" version))
 
+(def re-sha1 #"\b[0-9a-f]{5,40}\b")
+
 ; every hour
 (def dht-refresh-interval-ms (* 60 60 1000))
 ; for one month

@@ -21,8 +21,6 @@ bitwalden.js: build/bitwalden-server-node.js
 build/bitwalden-server-node.js: $(CLJS) $(NODE) node_modules node_modules/webtorrent/webtorrent.min.js package.json project.clj
 	lein cljsbuild once prod
 
-.PHONY: clean
-
 deps/nodeenv-src/nodeenv.py:
 	git clone --branch $(NODEENV_VERSION) https://github.com/ekalinin/nodeenv.git deps/nodeenv-src
 
@@ -35,7 +33,11 @@ node_modules: deps/node/bin/npm package.json
 
 node_modules/webtorrent/webtorrent.min.js: node_modules
 
-clean:
+.PHONY: clean clean-build
+
+clean-build:
 	lein clean
 	rm -rf bitwalden-daemon bitwalden.js bitwalden-bundled.js
+
+clean: clean-build
 	rm -rf node_modules deps build

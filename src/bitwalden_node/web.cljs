@@ -72,7 +72,7 @@
                   (if (and call (or (= (.. req -method) "GET") (= (.. req -method) "HEAD")))
                     (do
                       (write-header res 200)
-                      (.end res (to-json (call public-peers))))
+                      (.end res (to-json (call bt @clients @public-peers))))
                     (cb)))))
     
     ; serve

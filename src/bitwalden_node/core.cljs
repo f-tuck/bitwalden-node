@@ -1,5 +1,5 @@
 (ns bitwalden-node.core
-  (:require [bitwalden-node.utils :refer [<<< sha1 to-json buf-hex timestamp-now]]
+  (:require [bitwalden-node.utils :refer [<<< sha1 to-json buf-hex timestamp-now compute-memory-usage]]
             [bitwalden-node.config :as config]
             [bitwalden-node.dht :as dht]
             [bitwalden-node.torrent :as torrent]
@@ -18,6 +18,7 @@
 ; (.install source-map-support)
 (defonce debug (debug-fn "bitwalden-node.core"))
 (defonce crypto (nodejs/require "crypto"))
+(defonce os (nodejs/require "os"))
 
 (nodejs/enable-util-print!)
 
@@ -148,8 +149,12 @@
 
 (def web-api
   {"/" (fn [] true)
-   "/bw/info" (fn [] {:bitwalden const/version})
-   "/bw/peers" (fn [public-peers] @public-peers)})
+   "/bw/peers" (fn [bt clients public-peers] public-peers)
+   "/bw/info" (fn [bt clients public-peers] {:bitwalden const/version
+                                             :mem (compute-memory-usage)
+                                             :loadavg (os.loadavg)
+                                             :peers public-peers
+                                             :infohashes (torrent/get-current-torrent-hashes bt)})})
 
 ; hack for reloadable code
 (reset! web-api-atom web-api)

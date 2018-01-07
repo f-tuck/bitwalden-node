@@ -40,3 +40,14 @@
     {"error" true
      "code" (.. e -code)
      "message" (.. e -message)}))
+
+(defn compute-memory-usage []
+  (into {}
+        (map
+          (fn [[k v]] [k (-> v
+                             (/ 1024)
+                             (/ 1024)
+                             (* 100)
+                             (js/Math.round)
+                             (/ 100))])
+          (js->clj (js/process.memoryUsage)))))

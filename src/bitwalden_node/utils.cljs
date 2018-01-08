@@ -3,6 +3,7 @@
             [cljs.nodejs :as nodejs])
   (:require-macros [cljs.core.async.macros :refer [go]]))
 
+(defonce process (nodejs/require "process"))
 (defonce crypto (nodejs/require "crypto"))
 (defonce os (nodejs/require "os"))
 
@@ -50,4 +51,17 @@
                              (* 100)
                              (js/Math.round)
                              (/ 100))])
-          (js->clj (js/process.memoryUsage)))))
+          (js->clj (process.memoryUsage)))))
+
+(defn detect-leaks [dumps-folder]
+  (let [memwatch (nodejs/require "memwatch-next")
+        heapdump (nodejs/require "heapdump")]
+    (.on memwatch "leak"
+         (fn [info]
+           (console.error "memwatch leak:\n" info)
+           (.writeSnapshot heapdump
+                           (str dumps-folder "/" (js/Date.now) ".heapsnapshot")
+                           (fn [err filename]
+                             (if err
+                               (console.error "heapdump error:\n" err)
+                               (console.error "Wrote heapdump:" filename))))))))

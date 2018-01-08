@@ -1,5 +1,5 @@
 (ns bitwalden-node.core
-  (:require [bitwalden-node.utils :refer [<<< sha1 to-json buf-hex timestamp-now compute-memory-usage]]
+  (:require [bitwalden-node.utils :refer [<<< sha1 to-json buf-hex timestamp-now compute-memory-usage detect-leaks]]
             [bitwalden-node.config :as config]
             [bitwalden-node.dht :as dht]
             [bitwalden-node.torrent :as torrent]
@@ -181,6 +181,8 @@
 (defonce clients
   (atom clients-struct))
 
+(defonce webtorrent (atom nil))
+
 ;*** entry point ***;
 
 (defn -main []
@@ -198,11 +200,17 @@
         web (web/make downloads-dir log-dir api-atom web-api-atom bt clients public-peers)
         public-url (if (not (@configuration :private)) (or (@configuration :URL) (str ":" (web :port))))
         node-pool (pool/connect bt const/public-pool-name public-url public-peers)]
+
+    (if (@configuration "debug")
+      (let [dumps-folder (config/ensure-dir (or (@configuration "dumps_dir") (config/make-filename "dumps")))]
+        (reset! webtorrent bt)
+        (detect-leaks dumps-folder)))
+
     ; load our persisted datastructures
     (swap! clients assoc
            :queues (config/load-to-clj queues-file)
            :contracts (config/load-to-clj contracts-file))
-    
+
     ; when we exit we want to save datastructures we want to persist
     (config/install-exit-handler
       [[queues-file clients [:queues]]

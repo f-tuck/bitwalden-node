@@ -37,7 +37,7 @@ node_modules/webtorrent/webtorrent.min.js: node_modules
 
 clean-build:
 	lein clean
-	rm -rf bitwalden-daemon bitwalden.js bitwalden-bundled.js
+	rm -rf bitwalden-daemon bitwalden-daemon.js bitwalden.js build/bitwalden-bundled.js build/bitwalden-server-node.js
 
 clean: clean-build
 	rm -rf node_modules deps build

@@ -13,3 +13,6 @@ pom.xml
 /build/
 *.retry
 /workspace/
+package-lock.json
+bitwalden-daemon
+bitwalden-daemon.js

@@ -6,10 +6,10 @@ NODEENV_VERSION=0.13.6
 
 all: bitwalden.js bitwalden-daemon
 
-bitwalden-daemon: bitwalden-bundled.js bin/binary-unpack-header.sh bin/make-binary.sh
+bitwalden-daemon: build/bitwalden-bundled.js bin/binary-unpack-header.sh bin/make-binary.sh
 	./bin/make-binary.sh
 
-bitwalden-bundled.js: build/bitwalden-server-node.js
+build/bitwalden-bundled.js: build/bitwalden-server-node.js
 	echo "#!/usr/bin/env node" > $@
 	./node_modules/.bin/browserify --node $< | sed -e "s+`pwd`++" | ./node_modules/.bin/uglifyjs > $@
 	chmod 755 $@

@@ -204,7 +204,7 @@
     (if (@configuration "debug")
       (let [dumps-folder (config/ensure-dir (or (@configuration "dumps_dir") (config/make-filename "dumps")))]
         (reset! webtorrent bt)
-        (detect-leaks dumps-folder)))
+        (debug "detect-leaks:" (detect-leaks dumps-folder))))
 
     ; load our persisted datastructures
     (swap! clients assoc

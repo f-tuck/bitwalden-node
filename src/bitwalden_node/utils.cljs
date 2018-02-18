@@ -57,14 +57,18 @@
           (js->clj (process.memoryUsage)))))
 
 (defn detect-leaks [dumps-folder]
-  (let [memwatch (nodejs/require "memwatch-next")
-        heapdump (nodejs/require "heapdump")]
-    (.on memwatch "leak"
-         (fn [info]
-           (console.error "memwatch leak:\n" info)
-           (.writeSnapshot heapdump
-                           (str dumps-folder "/" (js/Date.now) ".heapsnapshot")
-                           (fn [err filename]
-                             (if err
-                               (console.error "heapdump error:\n" err)
-                               (console.error "Wrote heapdump:" filename))))))))
+  (let [memwatch (try (nodejs/require "memwatch-next") (catch :default e nil))
+        heapdump (try (nodejs/require "heapdump") (catch :default e nil))]
+    (if (and memwatch heapdump)
+      (do
+        (.on memwatch "leak"
+             (fn [info]
+               (console.error "memwatch leak:\n" info)
+               (.writeSnapshot heapdump
+                               (str dumps-folder "/" (js/Date.now) ".heapsnapshot")
+                               (fn [err filename]
+                                 (if err
+                                   (console.error "heapdump error:\n" err)
+                                   (console.error "Wrote heapdump:" filename))))))
+        "Successfully installed memory leak detection.")
+      "Not running memory leak detection because of failed memwatch-next/heapdump require. Install those modules to activate it.")))

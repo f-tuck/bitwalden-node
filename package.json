@@ -19,7 +19,7 @@
     "tweetnacl": "^1.0.0",
     "uglify-es": "^3.2.0",
     "url-exists": "^1.0.3",
-    "webtorrent": "^0.81.0"
+    "webtorrent": "^0.98.21"
   },
   "devDependencies": {
     "source-map-support": "0.4.0",

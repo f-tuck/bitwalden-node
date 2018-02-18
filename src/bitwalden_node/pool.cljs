@@ -1,7 +1,7 @@
 (ns bitwalden-node.pool
   (:require [cljs.nodejs :as nodejs]
             [cljs.core.async :refer [chan put! <! close! timeout]]
-            [bitwalden-node.utils :refer [buf-hex <<<]]
+            [bitwalden-node.utils :refer [buf-hex <<< sha256]]
             ["url-exists" :as url-exists]
             ["range_check" :as ip-range-check]
             ["webtorrent" :as wt]
@@ -81,9 +81,8 @@
     (.on wire "close" (partial detach-wire peers their-url wire))))
 
 (defn connect [wt channel-name public-url peers]
-  (let [content (js/Buffer. #js [0])]
-    (set! (.. content -name) channel-name)
-    (.on wt "torrent" #(debug "pool/connect torrent" (.-infoHash %)))
-    (let [torrent (.seed wt content #(js/console.log "pool/connect" (.-infoHash %)))]
+  (let [channel-hash (-> channel-name (sha256) (sha256) (.toString "hex") (.slice -40))]
+    (let [torrent (.add wt channel-hash #(js/console.log "pool/connect" (.-infoHash %)))]
+      (.on torrent "infoHash" #(debug "pool hash:" %))
       (.on torrent "wire" (partial attach-wire public-url peers))
       peers)))

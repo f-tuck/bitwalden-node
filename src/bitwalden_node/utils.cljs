@@ -21,6 +21,9 @@
 (defn sha1 [x]
   (.digest (.update (.createHash crypto "sha1") x "utf8")))
 
+(defn sha256 [x]
+  (.digest (.update (.createHash crypto "sha256") x "utf8")))
+
 (defn to-json [x]
   (js/JSON.stringify (clj->js x)))
 

@@ -154,7 +154,8 @@
                                              :mem (compute-memory-usage)
                                              :loadavg (os.loadavg)
                                              :peers public-peers
-                                             :infohashes (torrent/get-current-torrent-hashes bt)})})
+                                             :infohashes (torrent/get-current-torrent-hashes bt)
+                                             :profiles (contracts/dht-list-hashes clients)})})
 
 ; hack for reloadable code
 (reset! web-api-atom web-api)

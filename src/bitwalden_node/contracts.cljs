@@ -67,3 +67,11 @@
                    results)))
              results)))
 
+(defn dht-list-hashes [clients]
+  (let [dht-contracts (get-in clients [:contracts "refresh"])
+        key-salt-pairs (for [[k contracts] dht-contracts [salt contract] contracts] [k salt])]
+    (map
+      (fn [[k salt]]
+        [k salt (.toString (dht/address k salt) "hex")])
+      key-salt-pairs)))
+

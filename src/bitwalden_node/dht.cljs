@@ -29,8 +29,8 @@
   (go
     (let [address-hash (js/Buffer. address-hash "hex")
           [err response] (<! (<<< #(.get dht address-hash (clj->js {:salt salt
-                                                                    :verify verify
-                                                                    :nocache true}) %)))
+                                                                    :nocache true
+                                                                    :verify verify}) %)))
           response (js->clj response)
           response (if response
                      {"k" (-> response (get "k") (bs58/encode))

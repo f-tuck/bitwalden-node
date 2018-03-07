@@ -1,0 +1,7 @@
+366c366
+<   if (value) {
+---
+>   if (value && !opts.nocache) {
+388a389,390
+> 
+>     if (opts.salt) r.salt = Buffer(opts.salt)

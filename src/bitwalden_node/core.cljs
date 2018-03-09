@@ -97,6 +97,13 @@
    (fn [params clients bt content-dir]
      (or (web/authenticate params)
          (validation/check params
+                           {"infohash" [:exists? :hex-sha1?]})
+         (torrent/fetch bt (params "infohash") content-dir)))
+
+   :torrent-fetch-queued
+   (fn [params clients bt content-dir]
+     (or (web/authenticate params)
+         (validation/check params
                            {"u" [:exists? :string? :max1k?]
                             "infohash" [:exists? :hex-sha1?]})
          (let [k (params "k")

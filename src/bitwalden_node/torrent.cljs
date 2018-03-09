@@ -71,6 +71,29 @@
                          (close! c)))))))))
     c))
 
+; fetch a torrent in one hit without sending incremental download stats
+; use this for <1mb downloads
+(defn fetch [bt infoHash downloads-dir]
+  (let [c (chan)
+        path (str downloads-dir "/" infoHash)
+        success-hash {"download" "done" "path" (str "content/" infoHash "/")}]
+    (go
+      (let [existing-torrent (.get bt infoHash)]
+        (if existing-torrent
+          (do
+            (debug "Already added" infoHash downloads-dir)
+            (put! c (merge success-hash {"files" (get-torrent-files existing-torrent)}))
+            (close! c))
+          (let [opts #js {:path path}]
+            (debug "Adding" infoHash downloads-dir)
+            (.add bt infoHash opts
+                  (fn [torrent]
+                    (.on torrent "done"
+                         (fn []
+                           (put! c (merge success-hash {"files" (get-torrent-files torrent)}))
+                           (close! c)))))))))
+    c))
+
 ; get a download link to some torrent
 (defn add [bt infoHash downloads-dir]
   (let [c (chan)

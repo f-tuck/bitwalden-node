@@ -67,6 +67,10 @@
                 (.seed bt content #js {:path (str downloads-dir "/" infoHash) :createdBy constants/created-by}
                        (fn [torrent]
                          (debug "Seeding" infoHash downloads-dir)
+                         ; write torrent file
+                         (debug "Writing" (str downloads-dir "/" infoHash ".torrent"))
+                         ; TODO: replace this with API which automatically sends the torrent file
+                         (.writeFile fs (str downloads-dir "/" infoHash ".torrent") torrent-blob)
                          (put! c {"infohash" (.-infoHash torrent) "path" path})
                          (close! c)))))))))
     c))
@@ -124,7 +128,14 @@
     c))
 
 ; re-seed a torrent we have on disk already
-(defn re-seed [bt infohash torrent-files path]
-  (debug "Re-seeding" infohash)
-  (<<< #(.seed bt (clj->js torrent-files) #js {:path path})))
+(defn re-seed [bt infoHash torrent-files path]
+  (debug "Re-seeding" infoHash)
+  (let [c (chan)]
+    (.seed bt (clj->js torrent-files) #js {:path path}
+           (fn [torrent]
+             ; TODO: replace this with API which automatically sends the torrent file
+             (debug "Writing" (str path ".torrent"))
+             (.writeFile fs (str path ".torrent") (.-torrentFile torrent)
+                         (fn [] (debug "Wrote" (str path ".torrent"))))
+             (put! c torrent)))))
 

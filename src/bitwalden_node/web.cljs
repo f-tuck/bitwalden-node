@@ -39,6 +39,10 @@
 (defn make-json-rpc-server [api clients bt content-dir]
   (.middleware (.server jayson #js {} #js {:router (partial jsonrpc-router api clients bt content-dir)})))
 
+(defn add-cors-headers [res]
+  (.header res "Access-Control-Allow-Origin" "*")
+  (.header res "Access-Control-Allow-Headers" "Origin, X-Requested-With, Content-Type, Accept, Range"))
+
 (defn make [content-dir log-dir api-atom web-api-atom bt clients public-peers]
   (let [app (express)
         requests-chan (chan)]
@@ -50,11 +54,14 @@
                              "access.log"
                              #js {:interval "1d" :path log-dir})}))
 
-    ; allows cross site requests
     (.use app (fn [req res n]
-                (.header res "Access-Control-Allow-Origin" "*")
-                (.header res "Access-Control-Allow-Headers" "Origin, X-Requested-With, Content-Type, Accept")
+                (add-cors-headers res)
                 (n)))
+
+    ; allows cross site requests
+    (.options app "/*" (fn [req res n]
+                         (add-cors-headers res)
+                         (.sendStatus res 200)))
 
     ; allow url encoded requests
     (.use app (.urlencoded body-parser #js {:extended true}))
@@ -64,17 +71,17 @@
 
     ; hook up the JSON RPC API
     (.post app "/bw/rpc" (.json body-parser #js {:limit "1mb" :type "*/*" }) (make-json-rpc-server api-atom clients bt content-dir))
-    
+
     ; hook up the remaining JSON API calls
     (.use app (fn [req res cb]
                 (let [path (.. req -path)
                       call (or (get @web-api-atom path) (get @web-api-atom (str path "/")))]
-                  (if (and call (or (= (.. req -method) "GET") (= (.. req -method) "HEAD")))
+                  (if (and call (or (= (.. req -method) "GET") (= (.. req -method) "HEAD") (= (.. req -method) "OPTIONS")))
                     (do
                       (write-header res 200)
                       (.end res (to-json (call bt @clients @public-peers))))
                     (cb)))))
-    
+
     ; serve
     (.listen app const/web-api-port)
 

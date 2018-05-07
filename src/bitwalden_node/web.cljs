@@ -10,6 +10,7 @@
             ["morgan" :as morgan]
             ["rotating-file-stream" :as rotating-file-stream]
             ["express" :as express]
+            ["cors/lib" :as cors]
             ["url" :as url]
             ["tweetnacl" :as nacl]
             ["bs58" :as bs58]
@@ -39,13 +40,12 @@
 (defn make-json-rpc-server [api clients bt content-dir]
   (.middleware (.server jayson #js {} #js {:router (partial jsonrpc-router api clients bt content-dir)})))
 
-(defn add-cors-headers [res]
-  (.header res "Access-Control-Allow-Origin" "*")
-  (.header res "Access-Control-Allow-Headers" "Origin, X-Requested-With, Content-Type, Accept, Range"))
-
 (defn make [content-dir log-dir api-atom web-api-atom bt clients public-peers]
   (let [app (express)
         requests-chan (chan)]
+
+    ; cors
+    (.use app (cors #js {:optionsSuccessStatus 200}))
 
     ; logging
     (.use app (morgan "combined"
@@ -53,15 +53,6 @@
                            (rotating-file-stream
                              "access.log"
                              #js {:interval "1d" :path log-dir})}))
-
-    (.use app (fn [req res n]
-                (add-cors-headers res)
-                (n)))
-
-    ; allows cross site requests
-    (.options app "/*" (fn [req res n]
-                         (add-cors-headers res)
-                         (.sendStatus res 200)))
 
     ; allow url encoded requests
     (.use app (.urlencoded body-parser #js {:extended true}))
@@ -76,7 +67,7 @@
     (.use app (fn [req res cb]
                 (let [path (.. req -path)
                       call (or (get @web-api-atom path) (get @web-api-atom (str path "/")))]
-                  (if (and call (or (= (.. req -method) "GET") (= (.. req -method) "HEAD") (= (.. req -method) "OPTIONS")))
+                  (if (and call (or (= (.. req -method) "GET") (= (.. req -method) "HEAD")))
                     (do
                       (write-header res 200)
                       (.end res (to-json (call bt @clients @public-peers))))

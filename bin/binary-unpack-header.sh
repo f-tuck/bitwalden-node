@@ -1,5 +1,6 @@
 #!/bin/sh
 
+hashfn=`command -v sha256sum || command -v sha256`
 found=`type node`
 if [ "$?" = "0" ]
 then
@@ -7,7 +8,7 @@ then
   LOGFILE=${LOGFILE:-~/.bitwalden/log/bitwalden.log}
   mkdir -p `dirname $LOGFILE`
   sed -e '0,/^#GZIPPED-BINARY-FOLLOWS#$/d' $0 | gunzip -c > $TMPFILE
-  echo Bitwalden build `sha256sum $0` > $LOGFILE
+  echo Bitwalden build `$hashfn $0` > $LOGFILE
   echo Starting at `date` >> $LOGFILE
   DEBUG=${DEBUG:-'bitwalden*'} exec node $TMPFILE >>$LOGFILE 2>&1
   exit $?
